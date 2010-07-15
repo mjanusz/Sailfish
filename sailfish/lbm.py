@@ -579,17 +579,19 @@ class LBMSim(object):
         self._fsi_ang_prev = fsi_array()
         self._fsi_avel_prev = fsi_array()
 
-        # FIXME: This and other particle structures should be created here.
         self._fsi_force = fsi_array()
         self._fsi_torque = fsi_array()
-
-        self._fsi_node_force = self.make_dist(None, components=self.grid.dim)
-        self._fsi_node_torque = self.make_dist(None, components=self.grid.dim)
 
         self._fsi_pos[:] = numpy.transpose(self.float(pos))
         self._fsi_vel[:] = numpy.transpose(self.float(vel))
         self._fsi_ang[:] = numpy.transpose(self.float(ang))
         self._fsi_avel[:] = numpy.transpose(self.float(avel))
+
+        max_blocks = 0
+        for i, obj in enumerate(self.geo.fsi_objects):
+            max_blocks = max(max_blocks, obj.grid_size[0] * obj.grid_size[1])
+
+        self.fsi_partial_blocks = max_blocks
 
     def _update_ctx(self, ctx):
         pass
@@ -663,7 +665,7 @@ class LBMSim(object):
         ctx['fsi_stride'] = strides[0] / strides[1]
         ctx['fsi_enabled'] = self.has_fsi()
         ctx['fsi_num'] = len(self.geo.fsi_objects)
-        ctx['fsi_partial_blocks'] = FIXME
+        ctx['fsi_partial_blocks'] = self.fsi_partial_blocks
 
         # FIXME: We should query the computational backend for this value.
         ctx['warp_size'] = 32
@@ -736,7 +738,7 @@ class LBMSim(object):
         strides, size = self._get_strides(self.float)
         shape = [components] + list(self.shape)
         strides = [strides[-1]*size] + list(strides)
-        size *= len(components)
+        size *= components
         return numpy.ndarray(shape, buffer=numpy.zeros(size, dtype=self.float),
                              dtype=self.float, strides=strides)
 
@@ -814,6 +816,11 @@ class LBMSim(object):
         self.gpu_dist1a = self.backend.alloc_buf(like=self.dist1)
         self.gpu_dist1b = self.backend.alloc_buf(like=self.dist1)
 
+    def _fsi_args(self):
+        return [self.gpu_fsi_pos, self.gpu_fsi_vel, self.gpu_fsi_avel,
+                self.gpu_fsi_node_force, self.gpu_fsi_node_torque]
+
+
     def _init_compute_fsi(self):
         if not self.has_fsi():
             return
@@ -826,13 +833,17 @@ class LBMSim(object):
         self.gpu_fsi_force = self.backend.alloc_buf(like=self._fsi_force)
         self.gpu_fsi_torque = self.backend.alloc_buf(like=self._fsi_torque)
 
-        self.gpu_fsi_node_force = self.backend.alloc_buf(like=self._fsi_node_force)
-        self.gpu_fsi_node_torque = self.backend.alloc_buf(like=self._fsi_node_torque)
+        self.gpu_fsi_node_force = self.backend.alloc_buf(size=self.get_dist_size() * self.grid.dim)
+        self.gpu_fsi_node_torque = self.backend.alloc_buf(size=self.get_dist_size() * self.grid.dim)
 
-        # TODO: At this point, the host arrays can be deleted.
+        buf_size = self.fsi_partial_blocks * self.float().nbytes
 
-        # FIXME: init fsi_node_force and fsi_node_torque here
-        # gpu_partial_force, gpu_partial_torque
+        if self.grid.dim == 3:
+            self.gpu_fsi_partial_force = self.backend.alloc_buf(size=buf_size*3)
+            self.gpu_fsi_partial_torque = self.backend.alloc_buf(size=buf_size*3)
+        else:
+            self.gpu_fsi_partial_force = self.backend.alloc_buf(size=buf_size*2)
+            self.gpu_fsi_partial_torque = self.backend.alloc_buf(size=buf_size)
 
         # FSI kernels
         args = [self.gpu_fsi_pos, self.gpu_fsi_vel, self.gpu_fsi_ang, self.gpu_fsi_avel,
@@ -854,8 +865,8 @@ class LBMSim(object):
 
         # Kernel used to sum forces and torques at invidual lattice nodes.
         args = [self.geo.gpu_map, self.gpu_fsi_node_force,
-                self.gpu_fsi_node_torque, self.gpu_partial_force,
-                self.gpu_partial_torque]
+                self.gpu_fsi_node_torque, self.gpu_fsi_partial_force,
+                self.gpu_fsi_partial_torque]
         args_format = 'PPPPP'
 
         if self.grid.dim == 3:
@@ -876,21 +887,10 @@ class LBMSim(object):
         # Kernel used to calculate the total force from partial sums.
         self.fsi_kern_total_from_partial = self.backend.get_kernel(
                 self.mod, 'FSI_SumPartialForceTorques', args=None,
-                args_format='PPPPPiPP', block=(1,))
+                args_format='PPPPiPP', block=(1,))
 
         for obj in self.geo.fsi_objects:
             obj.init_compute()
-
-    def _fsi_args(self):
-        if not self.has_fsi():
-            return []
-
-        if self.iter_ & 2:
-            return [self.gpu_fsi_pos1, self.gpu_fsi_vel, self.gpu_fsi_avel,
-                    self.gpu_fsi_node_force, self.gpu_fsi_node_torque]
-        else:
-            return [self.gpu_fsi_pos2, self.gpu_fsi_vel, self.gpu_fsi_avel,
-                    self.gpu_fsi_node_force, self.gpu_fsi_node_torque]
 
     def _init_compute_ic(self):
         if not self.ic_fields:
@@ -1026,22 +1026,27 @@ class LBMSim(object):
                 obj_id = numpy.uint32(i)
 
                 if self.grid.dim == 3:
-                    args[:-5] = [self.float(bbox.x0), self.float(bbox.x1),
-                                 self.float(bbox.x2), obj_id_np),
+                    args[-5:] = [self.float(bbox.x0), self.float(bbox.x1),
+                                 self.float(bbox.x2), obj_id_np,
                                  numpy.uint32(bbox.x1 - bbox.x0)]
                 else:
-                    args[:-3] = [self.float(bbox.x0), self.float(bbox.x1),
+                    args[-3:] = [self.float(bbox.x0), self.float(bbox.x1),
                                  obj_id]
 
                 self.backend.run_kernel(self.fsi_kern_process_node_force_torque,
-                        grid_size, args=args)
+                        obj.grid_size, args=args, block=obj.block_size,
+                        shmem=obj.shmem)
 
-                args = [self.gpu_partial_force, self.gpu_partial_torque,
-                        None, None, obj_id, self.gpu_fsi_force,
+                num_blocks = obj.grid_size[0] * obj.grid_size[1]
+
+                args = [self.gpu_fsi_partial_force, self.gpu_fsi_partial_torque,
+                        self.gpu_fsi_partial_force, self.gpu_fsi_partial_torque,
+                        obj_id, self.gpu_fsi_force,
                         self.gpu_fsi_torque]
 
                 self.backend.run_kernel(self.fsi_kern_total_from_partial,
-                        grid_size, args=args)
+                        (1,), args=args, block=num_blocks,
+                        shmem=obj.shmem_part2tot)
 
             # Every second iteration we actually move the particles.
             if self.iter_ & 1 == 0:
@@ -1063,21 +1068,24 @@ class LBMSim(object):
                 for i, obj in enumerate(self.geo.fsi_objects):
                     obj_id = numpy.uint32(i)
 
-                    obj.get_update(obj_id,
+                    num_blocks = obj.geo_update(obj_id,
                             self._fsi_pos[:,i], self._fsi_ang[:,i],
-                            self._fsi_vel[:.i], self._fsi_avel[:,i],
+                            self._fsi_vel[:,i], self._fsi_avel[:,i],
                             self._fsi_pos_prev[:,i], self._fsi_ang_prev[:,i],
                             self._fsi_vel_prev[:,i], self._fsi_avel_prev[:,i])
 
                     # HACK: None arguments -> write directly to final positions in
                     # global memory instead of producing yet another round of
-                    # partial sums.
-                    args = [self.gpu_partial_force, self.gpu_partial_torque,
-                            None, None, obj_id, self.gpu_fsi_force,
+                    # partial sums.  Same assumption is made in a similar piece
+                    # of code above.
+                    args = [self.gpu_fsi_partial_force, self.gpu_fsi_partial_torque,
+                            self.gpu_fsi_partial_force, self.gpu_fsi_partial_torque,
+                            obj_id, self.gpu_fsi_force,
                             self.gpu_fsi_torque]
 
                     self.backend.run_kernel(self.fsi_kern_total_from_partial,
-                            grid_size, args=args)
+                            (1,), args=args, block=num_blocks,
+                            shmem=obj.shmem_part2tot)
 
     def sim_step(self, tracers=False, get_data=False, **kwargs):
         """Perform a single step of the simulation.

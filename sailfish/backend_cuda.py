@@ -8,7 +8,7 @@ import pycuda.driver as cuda
 from struct import calcsize, pack
 
 def _expand_block(block):
-    if block is int:
+    if type(block) is int:
         return (block, 1, 1)
     elif len(block) == 1:
         return (block[0], 1, 1)
@@ -170,7 +170,7 @@ class CUDABackend(object):
         """Return a list of arguments set for the kernel."""
         return kern.args[0]
 
-    def run_kernel(self, kernel, grid_size, args=None):
+    def run_kernel(self, kernel, grid_size, args=None, block=None, shmem=None):
         """Run a CUDA kernel.
 
         :param kernel: kernel object obtained from :func:`get_kernel`
@@ -181,6 +181,13 @@ class CUDABackend(object):
             kernel.param_setv(0, pack(kernel.args[1], *args))
         else:
             kernel.param_setv(0, pack(kernel.args[1], *kernel.args[0]))
+
+        if shmem is not None:
+            kernel.set_shared_size(shmem)
+
+        if block is not None:
+            kernel.set_block_shape(*_expand_block(block))
+
         for img_field in kernel.img_fields:
             # Copy device buffer to 3D CUDA array if neessary.
             # if img_field in self._tex_to_memcpy:

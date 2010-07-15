@@ -1,3 +1,4 @@
+<%namespace file="opencl_compat.mako" import="*" name="opencl_compat"/>
 <%namespace file="kernel_common.mako" import="*" name="kernel_common"/>
 <%namespace file="code_common.mako" import="*"/>
 <%namespace file="propagation.mako" import="*"/>
@@ -81,7 +82,7 @@
 			part_vy = fsi_vel[obj_id + ${fsi_stride}];
 			%if dim == 3:
 				part_vz = fsi_vel[obj_id + ${2 * fsi_stride}];
-			node_%endif
+			%endif
 
 			part_avx = fsi_avel[obj_id];
 			%if dim == 3:
@@ -200,12 +201,13 @@ ${device_func} void warpReduce(volatile float *sdata, int idx)
 	sdata[idx] += sdata[idx + 1];
 }
 
+extern ${shared_var} float shared[];
 ${kernel} void ProcessParticleForceAndTorque(${global_ptr} unsigned int *map,
 	${global_ptr} float *fsi_force, ${global_ptr} float *fsi_torque,
 	${global_ptr} float *partial_force,
 	${global_ptr} float *partial_torque,
 	${decl_nvec('p0')},
-	unsigned int obj_id,
+	unsigned int obj_id
 	${if3d(', int x_size')})
 {
 	%if dim == 2:
@@ -253,7 +255,7 @@ ${kernel} void ProcessParticleForceAndTorque(${global_ptr} unsigned int *map,
 	int ptype = decodeNodeType(pcode);
 
 	if (ptype == ${geo_boundary}) {
-		unsigned int lobj_id, unsigned int dir_mask;
+		unsigned int lobj_id, dir_mask;
 		decodeBoundaryNode(pcode, &lobj_id, &dir_mask);
 
 		// Make sure the force is acting on the object that is being processed
@@ -283,7 +285,6 @@ ${device_func} inline bool SphericalParticle_isinside(${decl_nvec('')}, ${decl_n
 
 // NOTE: The reduction operation used in this kernel assumes that the total amount of
 // threads in the block is a multiply of 2.
-extern ${shared_var} float shared[];
 // obj_id: global ID of the particle
 // p0: the starting point of the bounding box (location of the midlink node, not the fluid one)
 // r0: position of the center of mass (COM) of the particle

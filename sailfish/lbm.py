@@ -583,6 +583,9 @@ class LBMSim(object):
         self._fsi_force = fsi_array()
         self._fsi_torque = fsi_array()
 
+        self._fsi_node_force = self.make_dist(None, components=self.grid.dim)
+        self._fsi_node_torque = self.make_dist(None, components=self.grid.dim)
+
         self._fsi_pos[:] = numpy.transpose(self.float(pos))
         self._fsi_vel[:] = numpy.transpose(self.float(vel))
         self._fsi_ang[:] = numpy.transpose(self.float(ang))
@@ -726,11 +729,14 @@ class LBMSim(object):
         return numpy.ndarray(self.shape, buffer=numpy.zeros(size, dtype=numpy.uint32),
                              dtype=numpy.uint32, strides=strides)
 
-    def make_dist(self, grid):
+    def make_dist(self, grid, components=None):
+        if components is None:
+            components = len(grid.basis)
+
         strides, size = self._get_strides(self.float)
-        shape = [len(grid.basis)] + list(self.shape)
+        shape = [components] + list(self.shape)
         strides = [strides[-1]*size] + list(strides)
-        size *= len(grid.basis)
+        size *= len(components)
         return numpy.ndarray(shape, buffer=numpy.zeros(size, dtype=self.float),
                              dtype=self.float, strides=strides)
 
@@ -820,6 +826,11 @@ class LBMSim(object):
         self.gpu_fsi_force = self.backend.alloc_buf(like=self._fsi_force)
         self.gpu_fsi_torque = self.backend.alloc_buf(like=self._fsi_torque)
 
+        self.gpu_fsi_node_force = self.backend.alloc_buf(like=self._fsi_node_force)
+        self.gpu_fsi_node_torque = self.backend.alloc_buf(like=self._fsi_node_torque)
+
+        # TODO: At this point, the host arrays can be deleted.
+
         # FIXME: init fsi_node_force and fsi_node_torque here
         # gpu_partial_force, gpu_partial_torque
 
@@ -866,6 +877,9 @@ class LBMSim(object):
         self.fsi_kern_total_from_partial = self.backend.get_kernel(
                 self.mod, 'FSI_SumPartialForceTorques', args=None,
                 args_format='PPPPPiPP', block=(1,))
+
+        for obj in self.geo.fsi_objects:
+            obj.init_compute()
 
     def _fsi_args(self):
         if not self.has_fsi():
@@ -983,20 +997,22 @@ class LBMSim(object):
         fsi_args = self._fsi_args()
 
         if get_data:
+            args = self.backend.get_args(kerns[1])
             if fsi_args:
-                kerns[1].args[0] = kerns[1].args[0][:-len(fsi_args)] + fsi_args
+                args = args[:-len(fsi_args)] + fsi_args
 
-            self.backend.run_kernel(kerns[1], self.kern_grid_size)
+            self.backend.run_kernel(kerns[1], self.kern_grid_size, args=args)
             if kwargs.get('tracers'):
                 self.backend.run_kernel(kerns[2], (self.num_tracers,))
                 self.hostsync_tracers()
             self.hostsync_velocity()
             self.hostsync_density()
         else:
+            args = self.backend.get_args(kerns[0])
             if fsi_args:
-                kerns[0].args[0] = kerns[0].args[0][:-len(fsi_args)] + fsi_args
+                args = args[:-len(fsi_args)] + fsi_args
 
-            self.backend.run_kernel(kerns[0], self.kern_grid_size)
+            self.backend.run_kernel(kerns[0], self.kern_grid_size, args=args)
             if kwargs.get('tracers'):
                 self.backend.run_kernel(kerns[2], (self.num_tracers,))
 

@@ -47,7 +47,7 @@ class SphericalParticle(FSIObject):
 
         return Box(x0, y0, z0, x1, y1, z1)
 
-    def geo_update_kernel(self):
+    def init_compute(self):
         # Kernel used to calculate the total force from partial sums.
         args_format = (4 + self.sim.grid.dim) * 'P' + 'i' + 'f' * (7 *
                 self.sim.grid.dim) + 'f'
@@ -58,8 +58,6 @@ class SphericalParticle(FSIObject):
         self.kern_geo_update = self.sim.backend.get_kernel(
                 self.sim.mod, 'SphericalParticle_GeoUpdate', args=None,
                 args_format=args_format, block=(1,))
-
-        ## FIXME: Rename this function and actually call it somewhere.
 
     def geo_update(self, obj_id, pos, ort, vel, avel, prev_pos, prev_ort, prev_vel, prev_avel):
         sim = self.sim

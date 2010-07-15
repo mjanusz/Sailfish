@@ -19,6 +19,15 @@ __device__ int inline get_group_id(int i)
 	}
 }
 
+__device__ int inline get_group_size(int i)
+{
+	if (i == 0) {
+		return gridDim.x;
+	} else {
+		return gridDim.y;
+	}
+}
+
 __device__ int inline get_local_id(int i)
 {
 	if (i == 0) {

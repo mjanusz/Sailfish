@@ -52,6 +52,10 @@ ${device_func} inline bool isVelocityOrPressureNode(int type) {
 	return isVelocityNode(type) || isPressureNode(type);
 }
 
+${device_func} inline bool isBoundaryNode(int type) {
+	return type == ${geo_boundary};
+}
+
 // Wet nodes are nodes that undergo a standard collision procedure.
 ${device_func} inline bool isWetNode(int type) {
 	return (
@@ -71,18 +75,33 @@ ${device_func} inline bool isWetNode(int type) {
 	);
 }
 
-${device_func} inline int decodeNodeType(int nodetype) {
-	return nodetype & ${geo_type_mask};
+${device_func} inline unsigned int decodeNodeType(unsigned int code) {
+	return (code & ${geo_type_mask});
 }
 
-${device_func} inline int decodeNodeOrientation(int nodetype) {
-	return nodetype >> ${geo_misc_shift + geo_param_shift};
+${device_func} inline unsigned int decodeNodeMisc(unsigned int code) {
+	return (code >> ${geo_misc_shift});
 }
 
-${device_func} inline int decodeNodeParam(int nodetype) {
-	return (nodetype >> ${geo_misc_shift}) & ${(1 << (geo_param_shift+1))-1};
+${device_func} inline unsigned int decodeNodeOrientation(unsigned int code) {
+	return (code >> ${geo_misc_shift + geo_param_shift});
 }
 
-${device_func} inline int encodeBoundaryNode(int dir_mask, int obj_id) {
+${device_func} inline unsigned int decodeNodeParam(unsigned int code) {
+	return (code >> ${geo_misc_shift}) & ${(1 << (geo_param_shift+1))-1};
+}
+
+${device_func} inline unsigned int encodeBoundaryNode(unsigned int dir_mask, unsigned int obj_id) {
 	return ${geo_boundary} | (obj_id << ${geo_misc_shift}) | (dir_mask << ${geo_misc_shift + geo_obj_shift});
+}
+
+${device_func} inline void decodeBoundaryNode(unsigned int code, unsigned int *obj_id,
+											  unsigned int *dir_mask)
+{
+	*obj_id = (code >> ${geo_misc_shift}) & ${(1 << (geo_obj_shift+1))-1};;
+	*dir_mask = code >> ${geo_misc_shift + geo_obj_shift};
+}
+
+${device_func} inline unsigned int encodeNode(unsigned int type, unsigned int misc) {
+	return type | (misc << ${geo_misc_shift});
 }

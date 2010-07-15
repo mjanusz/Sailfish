@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import numpy as np
+from sailfish import fsi
 from sailfish import lbm
 from sailfish import geo
 
@@ -25,6 +26,9 @@ class LBMGeoLDC(geo.LBMGeo2D):
 
         # walls
         self.set_geo(wall_map, self.NODE_WALL)
+
+        self.add_fsi_object(fsi.SphericalParticle(1.0, (self.lat_nx/2,
+            self.lat_ny/2), (0.0, 0.0), 0.0, 0.0, 5.0))
 
     def init_dist(self, dist):
         hy, hx = np.mgrid[0:self.lat_ny, 0:self.lat_nx]

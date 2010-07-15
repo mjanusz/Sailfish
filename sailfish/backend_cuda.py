@@ -144,9 +144,13 @@ class CUDABackend(object):
         return pycuda.compiler.SourceModule(source, options=options, keep=self.options.cuda_keep_temp) #options=['-Xopencc', '-O0']) #, options=['--use_fast_math'])
 
     def get_kernel(self, prog, name, block, args, args_format, shared=None, fields=[]):
+        """FIXME
+
+        :param args: can be None
+        """
         kern = prog.get_function(name)
         kern.param_set_size(calcsize(args_format))
-        setattr(kern, 'args', (args, args_format))
+        setattr(kern, 'args', [args, args_format])
         setattr(kern, 'img_fields', [x for x in fields if x is not None])
         kern.set_block_shape(*_expand_block(block))
         if shared is not None:
@@ -162,8 +166,21 @@ class CUDABackend(object):
 
         return kern
 
-    def run_kernel(self, kernel, grid_size):
-        kernel.param_setv(0, pack(kernel.args[1], *kernel.args[0]))
+    def get_args(self, kern):
+        """Return a list of arguments set for the kernel."""
+        return kern.args[0]
+
+    def run_kernel(self, kernel, grid_size, args=None):
+        """Run a CUDA kernel.
+
+        :param kernel: kernel object obtained from :func:`get_kernel`
+        :param grid_size: size of the grid (tuple)
+        :param args: if not None, arguments with which to call the kernel
+        """
+        if args is not None:
+            kernel.param_setv(0, pack(kernel.args[1], *args))
+        else:
+            kernel.param_setv(0, pack(kernel.args[1], *kernel.args[0]))
         for img_field in kernel.img_fields:
             # Copy device buffer to 3D CUDA array if neessary.
             # if img_field in self._tex_to_memcpy:

@@ -14,7 +14,7 @@
 </%def>
 
 <%def name="bgk_args()">
-	g0m0, v
+	g0m0, v0
 	%if simtype == 'shan-chen':
 		, sca0
 	%endif
@@ -34,6 +34,9 @@ ${kernel_common.body(bgk_args_decl)}
 <%namespace file="propagation.mako" import="*"/>
 
 <%include file="tracers.mako"/>
+<%include file="fsi.mako"/>
+
+<%namespace file="fsi.mako" import="process_fsi_boundary"/>
 
 <%def name="init_dist_with_eq()">
 	%for local_var in bgk_equilibrium_vars:
@@ -118,14 +121,18 @@ ${kernel} void PrepareMacroFields(
 }
 
 ${kernel} void CollideAndPropagate(
-	${global_ptr} int *map,
+	${global_ptr} unsigned int *map,
 	${global_ptr} float *dist_in,
 	${global_ptr} float *dist_out,
 	${global_ptr} float *orho,
 	${kernel_args_1st_moment('ov')}
 	int save_macro
 %if simtype == 'shan-chen':
-	,${global_ptr} float *gg0m0
+	, ${global_ptr} float *gg0m0
+%endif
+%if fsi_enabled:
+	, ${global_ptr} float *fsi_pos, ${global_ptr} float *fsi_vel, ${global_ptr} float *fsi_avel,
+	  ${global_ptr} float *fsi_force, ${global_ptr} float *fsi_torque
 %endif
 	)
 {
@@ -135,6 +142,7 @@ ${kernel} void CollideAndPropagate(
 	%for i in sym.get_prop_dists(grid, 1):
 		${shared_var} float prop_${grid.idx_name[i]}[BLOCK_SIZE];
 	%endfor
+	## FIXME: This should not be here.
 	%for i in sym.get_prop_dists(grid, 1):
 		#define prop_${grid.idx_name[grid.idx_opposite[i]]} prop_${grid.idx_name[i]}
 	%endfor
@@ -157,28 +165,28 @@ ${kernel} void CollideAndPropagate(
 	%endif
 
 	// Macroscopic quantities for the current cell
-	float g0m0, v[${dim}];
+	float g0m0, v0[${dim}];
 
 	%if simtype == 'shan-chen':
 		${sc_macro_fields()}
 	%else:
-		getMacro(&d0, ncode, type, orientation, &g0m0, v);
+		getMacro(&d0, ncode, type, orientation, &g0m0, v0);
 	%endif
 
-	precollisionBoundaryConditions(&d0, ncode, type, orientation, &g0m0, v);
+	precollisionBoundaryConditions(&d0, ncode, type, orientation, &g0m0, v0);
 	${relaxate(bgk_args)}
-	postcollisionBoundaryConditions(&d0, ncode, type, orientation, &g0m0, v, gi, dist_out);
-
+	postcollisionBoundaryConditions(&d0, ncode, type, orientation, &g0m0, v0, gi, dist_out);
 	// only save the macroscopic quantities if requested to do so
 	if (save_macro == 1) {
 		orho[gi] = g0m0;
-		ovx[gi] = v[0];
-		ovy[gi] = v[1];
+		ovx[gi] = v0[0];
+		ovy[gi] = v0[1];
 		%if dim == 3:
-			ovz[gi] = v[2];
+			ovz[gi] = v0[2];
 		%endif
 	}
 
+	${process_fsi_boundary()}
 	${propagate('dist_out', 'd0')}
 }
 

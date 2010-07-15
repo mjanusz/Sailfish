@@ -292,7 +292,7 @@ extern ${shared_var} float shared[];
 // x_size: (3D only) width of the bounding box
 ${kernel} void SphericalParticle_GeoUpdate(${global_ptr} unsigned int *map,
 	${kernel_args_1st_moment('iv')}
-	${global_ptr} float *dist1_in,
+	${global_ptr} float *dist1_out,
 	${global_ptr} float *partial_force,
 	${global_ptr} float *partial_torque,
 	unsigned int obj_id,
@@ -429,7 +429,7 @@ ${kernel} void SphericalParticle_GeoUpdate(${global_ptr} unsigned int *map,
 			%endfor
 
 			%for i, (feq, idx) in enumerate(bgk_equilibrium[0]):
-				${get_odist('dist1_in', i)} = ${cex(feq, vectors=True)};
+				${get_odist('dist1_out', i)} = ${cex(feq, vectors=True)};
 			%endfor
 
 			// Node becomes uncovered.  Modify the torque and force on the particle
@@ -508,13 +508,13 @@ ${kernel} void FSI_SumPartialForceTorques(${global_ptr} float *iforce, ${global_
 		// If we were executing in a single block, the computed value is final and can
 		// be written in the particle array.
 		if (get_group_size(0) == 1) {
-			particle_force[obj_id] = s_force_x[0];
-			particle_force[obj_id + ${fsi_stride}] = s_force_y[0];
-			particle_torque[obj_id] = s_torque_x[0];
+			particle_force[obj_id] += s_force_x[0];
+			particle_force[obj_id + ${fsi_stride}] += s_force_y[0];
+			particle_torque[obj_id] += s_torque_x[0];
 			%if dim == 3:
-				particle_force[obj_id + ${fsi_stride*2}] = s_force_z[0];
-				particle_torque[obj_id + ${fsi_stride}] = s_torque_y[0];
-				particle_torque[obj_id + ${fsi_stride*2}] = s_torque_z[0];
+				particle_force[obj_id + ${fsi_stride*2}] += s_force_z[0];
+				particle_torque[obj_id + ${fsi_stride}] += s_torque_y[0];
+				particle_torque[obj_id + ${fsi_stride*2}] += s_torque_z[0];
 			%endif
 		// Otherwise, this is just another partial result which needs to be written to
 		// a special array.
@@ -532,10 +532,9 @@ ${kernel} void FSI_SumPartialForceTorques(${global_ptr} float *iforce, ${global_
 	}
 }
 
-${kernel} void FSI_Move(${global_ptr} float *pos, ${global_ptr} float *prev_pos,
-	${global_ptr} float *vel,
-	${global_ptr} float *ang, ${global_ptr} float *prev_ang,
-	${global_ptr} float *avel, ${global_ptr} float *force, ${global_ptr} float *torque)
+${kernel} void FSI_Move(${global_ptr} float *pos, ${global_ptr} float *vel,
+	${global_ptr} float *ang, ${global_ptr} float *avel,
+	${global_ptr} float *force, ${global_ptr} float *torque)
 {
 	int i = get_global_id(0);
 	float lpos, lang, lvel, lavel;
@@ -546,15 +545,14 @@ ${kernel} void FSI_Move(${global_ptr} float *pos, ${global_ptr} float *prev_pos,
 		lvel = vel[i];
 		lavel = avel[i];
 
-		prev_pos[i] = lpos;
-		prev_ang[i] = lang;
-
 		// FIXME: This assumes the mass and the moment of inertia to be equal to 1.
 		lvel += force[i];
 		lavel += torque[i];
 
 		pos[i] = lpos + lvel;
 		ang[i] = lang + lavel;
+		vel[i] = lvel;
+		avel[i] = lavel;
 
 		force[i] = 0.0f;
 		torque[i] = 0.0f;

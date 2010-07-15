@@ -68,9 +68,7 @@ class SphericalParticle(FSIObject):
         bbox_prev = self.bounding_box(prev_pos, prev_ort)
         bbox = box_union(bbox, bbox_prev)
 
-        ## FIXME: Dist here.
-
-        args = [sim.geo.gpu_map] + sim.gpu_velocity + DIST +
+        args = [sim.geo.gpu_map] + sim.gpu_velocity + sim.curr_dists_out() +
                [sim.gpu_partial_force, sim.gpu_partial_torque,
                 obj_id, sim.float(bbox.x0), sim.float(bbox.y0)]
 

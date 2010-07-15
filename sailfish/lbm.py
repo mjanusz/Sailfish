@@ -403,18 +403,24 @@ class LBMSim(object):
                 self.lbm_model = x
                 break
 
-    def curr_dists(self):
+    def curr_dists_in(self):
         if self.iter_ & 1:
             return [self.gpu_dist1b]
         else:
             return [self.gpu_dist1a]
+
+    def curr_dists_out(self):
+        if self.iter_ & 1:
+            return [self.gpu_dist1a]
+        else:
+            return [self.gpu_dist1b]
 
     def hostsync_dist(self):
         """Copy the current distributions from the compute unit to the host.
 
         The distributions are then available in :attr:`dist`.
         """
-        for dist in self.curr_dists():
+        for dist in self.curr_dists_in():
             self.backend.from_buf(dist)
         self.backend.sync()
 
@@ -564,31 +570,23 @@ class LBMSim(object):
                 buffer=numpy.zeros(size * self.grid.dim, dtype=self.float),
                 dtype=self.float, strides=strides)
 
-        self._fsi_pos1 = fsi_array()
-        self._fsi_pos2 = fsi_array()
-        self._fsi_vel1 = fsi_array()
-        self._fsi_vel2 = fsi_array()
-        self._fsi_ang1 = fsi_array()
-        self._fsi_ang2 = fsi_array()
-        self._fsi_avel1 = fsi_array()
-        self._fsi_avel2 = fsi_array()
+        self._fsi_pos = fsi_array()
+        self._fsi_vel = fsi_array()
+        self._fsi_ang = fsi_array()
+        self._fsi_avel = fsi_array()
+        self._fsi_pos_prev = fsi_array()
+        self._fsi_vel_prev = fsi_array()
+        self._fsi_ang_prev = fsi_array()
+        self._fsi_avel_prev = fsi_array()
 
         # FIXME: This and other particle structures should be created here.
         self._fsi_force = fsi_array()
         self._fsi_torque = fsi_array()
 
-        self._fsi_pos1[:] = numpy.transpose(self.float(pos))
-        self._fsi_pos2[:] = numpy.transpose(self.float(pos))
-        self._fsi_vel1[:] = numpy.transpose(self.float(vel))
-        self._fsi_vel2[:] = numpy.transpose(self.float(vel))
-        self._fsi_ang1[:] = numpy.transpose(self.float(ang))
-        self._fsi_ang2[:] = numpy.transpose(self.float(ang))
-        self._fsi_avel1[:] = numpy.transpose(self.float(avel))
-        self._fsi_avel2[:] = numpy.transpose(self.float(avel))
-
-        self._fsi_confs = [
-            (self._fsi_pos1, self._fsi_ang1, self._fsi_vel1, self._fsi_avel1),
-            (self._fsi_pos2, self._fsi_ang2, self._fsi_vel2, self._fsi_avel2)]
+        self._fsi_pos[:] = numpy.transpose(self.float(pos))
+        self._fsi_vel[:] = numpy.transpose(self.float(vel))
+        self._fsi_ang[:] = numpy.transpose(self.float(ang))
+        self._fsi_avel[:] = numpy.transpose(self.float(avel))
 
     def _update_ctx(self, ctx):
         pass
@@ -815,33 +813,19 @@ class LBMSim(object):
             return
 
         # FSI structures
-        self.gpu_fsi_pos1 = self.backend.alloc_buf(like=self._fsi_pos1)
-        self.gpu_fsi_pos2 = self.backend.alloc_buf(like=self._fsi_pos2)
-        self.gpu_fsi_vel1 = self.backend.alloc_buf(like=self._fsi_vel1)
-        self.gpu_fsi_vel2 = self.backend.alloc_buf(like=self._fsi_vel2)
-        self.gpu_fsi_ang1 = self.backend.alloc_buf(like=self._fsi_ang1)
-        self.gpu_fsi_ang2 = self.backend.alloc_buf(like=self._fsi_ang2)
-        self.gpu_fsi_avel1 = self.backend.alloc_buf(like=self._fsi_avel1)
-        self.gpu_fsi_avel2 = self.backend.alloc_buf(like=self._fsi_avel2)
+        self.gpu_fsi_pos = self.backend.alloc_buf(like=self._fsi_pos)
+        self.gpu_fsi_vel = self.backend.alloc_buf(like=self._fsi_vel)
+        self.gpu_fsi_ang = self.backend.alloc_buf(like=self._fsi_ang)
+        self.gpu_fsi_avel = self.backend.alloc_buf(like=self._fsi_avel)
         self.gpu_fsi_force = self.backend.alloc_buf(like=self._fsi_force)
         self.gpu_fsi_torque = self.backend.alloc_buf(like=self._fsi_torque)
-
-        self.gpu_fsi_confs = [
-                (self.gpu_fsi_pos1, self.gpu_fsi_ang1, self.gpu_fsi_vel1,
-                    self.gpu_fsi_avel1),
-                (self.gpu_fsi_pos2, self.gpu_fsi_ang2, self.gpu_fsi_vel2,
-                    self.gpu_fsi_avel2)]
 
         # FIXME: init fsi_node_force and fsi_node_torque here
         # gpu_partial_force, gpu_partial_torque
 
         # FSI kernels
-        args1 = [self.gpu_fsi_pos1, self.gpu_fsi_pos2, self.gpu_fsi_vel,
-                 self.gpu_fsi_ang1, self.gpu_fsi_ang2, self.gpu_fsi_avel,
-                 self.gpu_fsi_force, self.gpu_fsi_torque]
-        args2 = [self.gpu_fsi_pos2, self.gpu_fsi_pos1, self.gpu_fsi_vel,
-                 self.gpu_fsi_ang2, self.gpu_fsi_ang1, self.gpu_fsi_avel,
-                 self.gpu_fsi_force, self.gpu_fsi_torque]
+        args = [self.gpu_fsi_pos, self.gpu_fsi_vel, self.gpu_fsi_ang, self.gpu_fsi_avel,
+                self.gpu_fsi_force, self.gpu_fsi_torque]
 
         size = len(self.geo.fsi_objects)
 
@@ -853,14 +837,9 @@ class LBMSim(object):
             block_size = 32
 
         # Kernel used to move the particles.
-        kern1 = self.backend.get_kernel(self.mod, 'FSI_Move',
-                    args=args1, args_format='P'*(len(args1)),
+        self.fsi_kern_move = self.backend.get_kernel(self.mod, 'FSI_Move',
+                    args=args, args_format='P'*(len(args)),
                     block=(block_size,))
-        kern2 = self.backend.get_kernel(self.mod, 'FSI_Move',
-                    args=args2, args_format='P'*(len(args2)),
-                    block=(block_size,))
-
-        self.fsi_kern_move_map = [kern1, kern2]
 
         # Kernel used to sum forces and torques at invidual lattice nodes.
         args = [self.geo.gpu_map, self.gpu_fsi_node_force,
@@ -887,9 +866,6 @@ class LBMSim(object):
         self.fsi_kern_total_from_partial = self.backend.get_kernel(
                 self.mod, 'FSI_SumPartialForceTorques', args=None,
                 args_format='PPPPPiPP', block=(1,))
-
-    def fsi_conf(self):
-        return (self._iter & 2) >> 1
 
     def _fsi_args(self):
         if not self.has_fsi():
@@ -1028,10 +1004,7 @@ class LBMSim(object):
             # TODO: Make it possible to run the particle loops in parallel.
             # Calculate the force exerted on the particle by the fluid.
             for i, obj in enumerate(self.geo.fsi_objects):
-                pos = self.fsi_pos(i)
-                ang = self.fsi_orientation(i)
-
-                bbox = obj.bounding_box(pos, ang)
+                bbox = obj.bounding_box(self._fsi_pos[:,i], self._fsi_ang[:,i])
                 args = self.backend.get_args(self.fsi_kern_process_node_force_torque)
 
                 obj_id = numpy.uint32(i)
@@ -1054,38 +1027,35 @@ class LBMSim(object):
                 self.backend.run_kernel(self.fsi_kern_total_from_partial,
                         grid_size, args=args)
 
-            ## FIXME: What about clearing the force and actually incrementing it
-            ## instead of overwriting?
-
             # Every second iteration we actually move the particles.
             if self.iter_ & 1 == 0:
-                conf = self.fsi_conf()
+                self.backend.run_kernel(self.fsi_kern_move, self.fsi_kern_move_grid)
 
-                self.backend.run_kernel(
-                        self.fsi_kern_move_map[conf],
-                        self.fsi_kern_move_grid)
+                # Save previous values.
+                self._fsi_pos_prev[:] = self._fsi_pos
+                self._fsi_ang_prev[:] = self._fsi_ang
+                self._fsi_vel_prev[:] = self._fsi_vel
+                self._fsi_avel_prev[:] = self._fsi_avel
 
-                # Load the new configuration from the GPU memory.
-                for x in self.gpu_fsi_confs[conf]:
-                    self.backend.from_buf(x)
+                # Load new values from the GPU.
+                self.backend.from_buf(self.gpu_fsi_pos)
+                self.backend.from_buf(self.gpu_fsi_ang)
+                self.backend.from_buf(self.gpu_fsi_vel)
+                self.backend.from_buf(self.gpu_fsi_avel)
 
                 # Update the geometry to reflect particle movement.
                 for i, obj in enumerate(self.geo.fsi_objects):
                     obj_id = numpy.uint32(i)
 
-                    pos = self.fsi_pos(i)
-                    ort = self.fsi_orientation(i)
-                    vel = self.fsi_velocity(i)
-                    avel = self.fsi_angular_velocity(i)
+                    obj.get_update(obj_id,
+                            self._fsi_pos[:,i], self._fsi_ang[:,i],
+                            self._fsi_vel[:.i], self._fsi_avel[:,i],
+                            self._fsi_pos_prev[:,i], self._fsi_ang_prev[:,i],
+                            self._fsi_vel_prev[:,i], self._fsi_avel_prev[:,i])
 
-                    prev_pos = self.fsi_pos(i, prev=True)
-                    prev_ort = self.fsi_orientation(i, prev=True)
-                    prev_vel = self.fsi_velocity(i, prev=True)
-                    prev_avel = self.fsi_angular_velocity(i, prev=True)
-
-                    obj.get_update(obj_id, pos, ort, vel, avel, prev_pos, prev_ort, prev_vel,
-                            prev_avel)
-
+                    # HACK: None arguments -> write directly to final positions in
+                    # global memory instead of producing yet another round of
+                    # partial sums.
                     args = [self.gpu_partial_force, self.gpu_partial_torque,
                             None, None, obj_id, self.gpu_fsi_force,
                             self.gpu_fsi_torque]
@@ -1358,11 +1328,17 @@ class BinaryFluidBase(FluidLBMSim):
         self.add_nonlocal_field(0)
         self.add_nonlocal_field(1)
 
-    def curr_dists(self):
+    def curr_dists_in(self):
         if self.iter_ & 1:
             return [self.gpu_dist1b, self.gpu_dist2b]
         else:
             return [self.gpu_dist1a, self.gpu_dist2a]
+
+    def curr_dists_out(self):
+        if self.iter_ & 1:
+            return [self.gpu_dist1a, self.gpu_dist2a]
+        else:
+            return [self.gpu_dist1b, self.gpu_dist2b]
 
     def _prepare_symbols(self):
         from sympy import Symbol, Matrix, Rational

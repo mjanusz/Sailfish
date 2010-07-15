@@ -1063,6 +1063,7 @@ class LBMSim(object):
                 self.backend.from_buf(self.gpu_fsi_ang)
                 self.backend.from_buf(self.gpu_fsi_vel)
                 self.backend.from_buf(self.gpu_fsi_avel)
+                self.backend.sync()
 
                 # Update the geometry to reflect particle movement.
                 for i, obj in enumerate(self.geo.fsi_objects):
@@ -1073,6 +1074,9 @@ class LBMSim(object):
                             self._fsi_vel[:,i], self._fsi_avel[:,i],
                             self._fsi_pos_prev[:,i], self._fsi_ang_prev[:,i],
                             self._fsi_vel_prev[:,i], self._fsi_avel_prev[:,i])
+
+                    self.backend.from_buf(self.geo.gpu_map)
+                    self.backend.sync()
 
                     # HACK: None arguments -> write directly to final positions in
                     # global memory instead of producing yet another round of

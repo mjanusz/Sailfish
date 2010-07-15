@@ -291,7 +291,8 @@ ${device_func} inline bool SphericalParticle_isinside(${decl_nvec('')}, ${decl_n
 // r0_prev: position of the COM during the previous call to this function
 // radius: radius of the particle
 // x_size: (3D only) width of the bounding box
-${kernel} void SphericalParticle_GeoUpdate(${global_ptr} unsigned int *map,
+${kernel} void SphericalParticle_GeoUpdate(
+	${global_ptr} unsigned int *map,
 	${kernel_args_1st_moment('iv')}
 	${global_ptr} float *dist1_out,
 	${global_ptr} float *partial_force,
@@ -333,9 +334,9 @@ ${kernel} void SphericalParticle_GeoUpdate(${global_ptr} unsigned int *map,
 	%endif
 
 	// Global simulation coordinates of the node processed by this thread.
-	float px = p0x + gx;
-	float py = p0y + gy;
-	${if3d('float pz = p0z + gz;')}
+	float px = p0x + int2float(gx);
+	float py = p0y + int2float(gy);
+	${if3d('float pz = p0z + int2float(gz);')}
 
 	// Transform gx and gy into global coordinates (in the whole simulation domain
 	// instead of just in the bounding box).
@@ -408,44 +409,48 @@ ${kernel} void SphericalParticle_GeoUpdate(${global_ptr} unsigned int *map,
 			}
 		%endfor
 
-		map[gi] = encodeBoundaryNode(bmask, obj_id);
+		if (bmask == 0) {
+			map[gi] = encodeNode(${geo_fluid}, 0);
+		} else {
+			map[gi] = encodeBoundaryNode(bmask, obj_id);
 
-		// If this node was inside the particle before but is now uncovered,
-		// initialize its distributions with equilibrium values from the previous
-		// time step.
-		if (ptype == ${geo_unused} && pobj == obj_id) {
-			## FIXME: This assumes rho0 = 1, which is not necessarily the case
-			## and does not work for binary fluids.
-			const float rho = 1.0f;
-			float ${nvec('dr')}, v0[${dim}];
+			// If this node was inside the particle before but is now uncovered,
+			// initialize its distributions with equilibrium values from the previous
+			// time step.
+			if (ptype == ${geo_unused} && pobj == obj_id) {
+				## FIXME: This assumes rho0 = 1, which is not necessarily the case
+				## and does not work for binary fluids.
+				const float rho = 1.0f;
+				float ${nvec('dr')}, v0[${dim}];
 
-			drx = px - prev_r0x;
-			dry = py - prev_r0y;
-			${if3d('drz = pz - prev_r0z;')}
+				drx = px - prev_r0x;
+				dry = py - prev_r0y;
+				${if3d('drz = pz - prev_r0z;')}
 
-			${local_part_velocity('prev_')}
+				${local_part_velocity('prev_')}
 
-			%for local_var in bgk_equilibrium_vars:
-				float ${cex(local_var.lhs)} = ${cex(local_var.rhs, vectors=True)};
-			%endfor
+				%for local_var in bgk_equilibrium_vars:
+					float ${cex(local_var.lhs)} = ${cex(local_var.rhs, vectors=True)};
+				%endfor
 
-			%for i, (feq, idx) in enumerate(bgk_equilibrium[0]):
-				${get_odist('dist1_out', i)} = ${cex(feq, vectors=True)};
-			%endfor
+				%for i, (feq, idx) in enumerate(bgk_equilibrium[0]):
+					${get_odist('dist1_out', i)} = ${cex(feq, vectors=True)};
+				%endfor
 
-			// Node becomes uncovered.  Modify the torque and force on the particle
-			// to maintain momentum balance.
-			s_force_x[thread_id] = -rho * (ivx[gi] - v0[0]);
-			s_force_y[thread_id] = -rho * (ivy[gi] - v0[1]);
-			${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
+				// Node becomes uncovered.  Modify the torque and force on the particle
+				// to maintain momentum balance.
+				s_force_x[thread_id] = -rho * (ivx[gi] - v0[0]);
+				s_force_y[thread_id] = -rho * (ivy[gi] - v0[1]);
+				${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
 
-			%if dim == 2:
-				s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
-			%else:
-				s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
-				s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
-				s_torque_z[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
-			%endif
+				%if dim == 2:
+					s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+				%else:
+					s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
+					s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
+					s_torque_z[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+				%endif
+			}
 		}
 	}
 
@@ -479,7 +484,7 @@ ${kernel} void FSI_SumPartialForceTorques(${global_ptr} float *iforce, ${global_
 
 	${barrier()};
 
-	for (unsigned int i = get_local_size(0) / 2; i > ${warp_size}; i >>= 1) {
+	for (unsigned int i = get_local_size(0) / 2; i > 0; i >>= 1) {
 		if (tid < i) {
 			s_force_x[tid] += s_force_x[tid + i];
 			s_force_y[tid] += s_force_y[tid + i];
@@ -493,8 +498,11 @@ ${kernel} void FSI_SumPartialForceTorques(${global_ptr} float *iforce, ${global_
 		${barrier()}
 	}
 
+	// FIXME: ignore this optimization for now as we sometimes get blocks smaller than
+	// 32 here.
+
 	// FIXME: Figure out what to do with this in OpenCL.
-	if (tid < ${warp_size}) {
+/*	if (tid < ${warp_size}) {
 		warpReduce(s_force_x, tid);
 		warpReduce(s_force_y, tid);
 		warpReduce(s_torque_x, tid);
@@ -504,7 +512,7 @@ ${kernel} void FSI_SumPartialForceTorques(${global_ptr} float *iforce, ${global_
 			warpReduce(s_torque_z, tid);
 		%endif
 	}
-
+*/
 	if (tid == 0) {
 		// If we were executing in a single block, the computed value is final and can
 		// be written in the particle array.

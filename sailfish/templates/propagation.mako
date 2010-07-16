@@ -83,7 +83,10 @@
 
 <%def name="set_odist(dist_out, dist_in, idir, xoff, yoff, zoff, offset, local)">
 	%if local:
-		${get_odist(dist_out, idir, xoff, yoff, zoff, offset)} = prop_${grid.idx_name[idir]}[lx];
+		## Propagate only if the value comes from a node that takes part in the simulation.
+		if (prop_${grid.idx_name[idir]}[lx] != -1.0f) {
+			${get_odist(dist_out, idir, xoff, yoff, zoff, offset)} = prop_${grid.idx_name[idir]}[lx];
+		}
 	%else:
 		${get_odist(dist_out, idir, xoff, yoff, zoff, offset)} = ${dist_in}.${grid.idx_name[idir]};
 	%endif
@@ -153,6 +156,11 @@
 	${prop_block_bnd(dist_out, dist_in, 0, 'prop_global')}
 
 	${barrier()}
+
+	// Refill the propagation buffer with invalid values.
+	%for i in sym.get_prop_dists(grid, 1):
+		prop_${grid.idx_name[i]}[lx] = -1.0f;
+	%endfor
 
 	// W propagation in shared memory
 	if (lx > 0) {

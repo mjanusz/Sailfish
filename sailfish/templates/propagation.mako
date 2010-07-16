@@ -84,7 +84,7 @@
 <%def name="set_odist(dist_out, dist_in, idir, xoff, yoff, zoff, offset, local)">
 	%if local:
 		## Propagate only if the value comes from a node that takes part in the simulation.
-		if (prop_${grid.idx_name[idir]}[lx] != -1.0f) {
+		if (!isnan(prop_${grid.idx_name[idir]}[lx])) {
 			${get_odist(dist_out, idir, xoff, yoff, zoff, offset)} = prop_${grid.idx_name[idir]}[lx];
 		}
 	%else:
@@ -159,7 +159,7 @@
 
 	// Refill the propagation buffer with invalid values.
 	%for i in sym.get_prop_dists(grid, 1):
-		prop_${grid.idx_name[i]}[lx] = -1.0f;
+		prop_${grid.idx_name[i]}[lx] = nanf("");
 	%endfor
 
 	// W propagation in shared memory

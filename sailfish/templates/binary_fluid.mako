@@ -201,7 +201,7 @@ ${kernel} void CollideAndPropagate(
 	// Initialize the propagation buffer with invalid values.  This is necessary to prevent
 	// propagation into the fluid from nodes that do not take part in the simulation.
 	%for i in sym.get_prop_dists(grid, 1):
-		prop_${grid.idx_name[i]}[lx] = -1.0f;
+		prop_${grid.idx_name[i]}[lx] = nanf("");
 	%endfor
 
 	// Unused nodes do not participate in the simulation.

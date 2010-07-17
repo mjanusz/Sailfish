@@ -184,7 +184,7 @@ class Fluid2DVis(vis.FluidVis):
         self.lat_ny = lat_ny
         self._mouse_pos = 0,0
         self._mouse_vel = 0,0
-
+        self._objects = True
         self._show_info = True
         self._show_walls = True
         self._tracers = False
@@ -316,6 +316,9 @@ class Fluid2DVis(vis.FluidVis):
         except (ValueError, AttributeError):
             pass
 
+        if self._objects:
+            self._draw_fsi_objects(sw / width, sh / height)
+
         return ret
 
     def _draw_field(self, fields, srf, wall_map, unused_map, bnd_map, width, height):
@@ -335,11 +338,16 @@ class Fluid2DVis(vis.FluidVis):
             # Draw the walls.
             a[wall_map] = self._color_wall
             a[unused_map] = self._color_unused
+        if not self._objects:
             a[bnd_map] = self._color_bnd
 
         n = len(fields)
-        fluid_map = numpy.logical_not(numpy.logical_or(numpy.logical_or(wall_map,
-            unused_map), bnd_map))
+
+        fluid_map = numpy.logical_or(wall_map, unused_map)
+        if not self._objects:
+            fluid_map = numpy.logical_or(fluid_map, bnd_map)
+
+        fluid_map = numpy.logical_not(fluid_map)
         field = cmaps[n][self._cmap[n]](*fv)
         a[fluid_map] = field[fluid_map]
 
@@ -355,6 +363,11 @@ class Fluid2DVis(vis.FluidVis):
         if self._tracers:
             for x, y in zip(tx, ty):
                 pygame.draw.circle(self._screen, (0, 255, 255), (int(x * sw / width), int(sh - y * sh / height)), 2)
+
+    def _draw_fsi_objects(self, scale_x, scale_y):
+        for i, obj in enumerate(self.sim.geo.fsi_objects):
+            obj.draw_2d(self._screen, scale_x, scale_y, self.sim._fsi_pos[:,i],
+                    self.sim._fsi_ang[:,i])
 
     def _get_loc(self, event):
         x = event.pos[0] * self.lat_nx / self._screen.get_width()
@@ -414,6 +427,8 @@ class Fluid2DVis(vis.FluidVis):
                     self._velocity = not self._velocity
                 elif event.key == pygame.K_t:
                     self._tracers = not self._tracers
+                elif event.key == pygame.K_o:
+                    self._objects = not self._objects
                 elif event.key == pygame.K_c:
                     self._convolve = not self._convolve
                 elif event.key == pygame.K_e:

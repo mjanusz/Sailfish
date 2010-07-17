@@ -97,14 +97,14 @@ class SphericalParticle(FSIObject):
         super(SphericalParticle, self).__init__(sim, mass, position, velocity, orientation, ang_velocity)
 
     def bounding_box(self, position, orientation):
-        x0 = position[0] - self.radius
-        y0 = position[1] - self.radius
-        x1 = position[0] + self.radius
-        y1 = position[1] + self.radius
+        x0 = position[0] - self.radius - 1
+        y0 = position[1] - self.radius - 1
+        x1 = position[0] + self.radius + 1
+        y1 = position[1] + self.radius + 1
 
         if len(position) > 2:
-            z0 = position[2] - self.radius
-            z1 = position[2] + self.radius
+            z0 = position[2] - self.radius - 1
+            z1 = position[2] + self.radius + 1
         else:
             z0 = 0
             z1 = 0
@@ -113,7 +113,7 @@ class SphericalParticle(FSIObject):
 
     def init_compute(self):
         # Kernel used to calculate the total force from partial sums.
-        args_format = (4 + self.sim.grid.dim) * 'P' + 'i' + 'f' * (7 *
+        args_format = (7 + self.sim.grid.dim) * 'P' + 'i' + 'f' * (1 *
                 self.sim.grid.dim) + 'f'
 
         if self.sim.grid.dim == 3:
@@ -135,17 +135,15 @@ class SphericalParticle(FSIObject):
 
         args = ([sim.geo.gpu_map] + sim.gpu_velocity + sim.curr_dists_out() +
                 [sim.gpu_fsi_partial_force, sim.gpu_fsi_partial_torque,
+                 sim.gpu_fsi_pos, sim.gpu_fsi_vel, sim.gpu_fsi_avel,
                  obj_id, sim.float(bbox.x0), sim.float(bbox.y0)])
 
         if sim.grid.dim == 3:
             args.append(sim.float(bbox.z0))
 
-        args.extend([sim.float(x) for x in pos])
-        args.extend([sim.float(x) for x in vel])
-        args.extend([sim.float(x) for x in avel])
-        args.extend([sim.float(x) for x in prev_pos])
-        args.extend([sim.float(x) for x in prev_vel])
-        args.extend([sim.float(x) for x in prev_avel])
+#        args.extend([sim.float(x) for x in prev_pos])
+#        args.extend([sim.float(x) for x in prev_vel])
+#        args.extend([sim.float(x) for x in prev_avel])
         args.append(sim.float(self.radius))
 
         if sim.grid.dim == 3:
@@ -155,7 +153,14 @@ class SphericalParticle(FSIObject):
 
         return self.grid_size[0] * self.grid_size[1]
 
-#    def draw_2d(self, surf):
-#        import pygame
-#        import pygame.draw
-#        pygame.draw.circle(surf, (255, 255, 255), self.position, self.radius)
+    def draw_2d(self, surf, scale_x, scale_y, pos, ang):
+        import pygame
+        import pygame.draw
+
+        pos_x = pos[0] * scale_x
+        pos_y = pos[1] * scale_y
+
+        sw, sh = surf.get_size()
+
+        pygame.draw.circle(surf, (255, 255, 255), (pos_x, sh - pos_y), self.radius *
+                (scale_x + scale_y) / 2)

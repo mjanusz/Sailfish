@@ -297,9 +297,10 @@ ${kernel} void SphericalParticle_GeoUpdate(
 	${global_ptr} float *dist1_out,
 	${global_ptr} float *partial_force,
 	${global_ptr} float *partial_torque,
+	${global_ptr} float *pos, ${global_ptr} float *vel, ${global_ptr} float *avel,
 	unsigned int obj_id,
-	${decl_nvec('p0')}, ${decl_nvec('r0')}, ${decl_nvec('part_v')}, ${decl_pvec('part_av')},
-	${decl_nvec('prev_r0')}, ${decl_nvec('prev_part_v')}, ${decl_pvec('prev_part_av')},
+	${decl_nvec('p0')},
+##	${decl_nvec('prev_r0')}, ${decl_nvec('prev_part_v')}, ${decl_pvec('prev_part_av')},
 	float radius
 	${if3d(', int x_size')})
 {
@@ -311,6 +312,17 @@ ${kernel} void SphericalParticle_GeoUpdate(
 		int gy = get_global_id(0) / x_size;
 		int gz = get_global_id(1);
 	%endif
+
+	${shared_var} float ${nvec('r0')}, ${nvec('part_v')}, ${pvec('part_av')};
+
+	// FIXME :Make it work in 3D as well.
+	r0x = pos[obj_id];
+	r0y = pos[obj_id + ${fsi_stride}];
+	part_vx = vel[obj_id];
+	part_vy = vel[obj_id + ${fsi_stride}];
+	part_avx = avel[obj_id];
+
+	${barrier()}
 
 	// Excess momentum and angular momentum to distribute to the particle.
 	float *s_force_x = (float*)shared;
@@ -378,7 +390,7 @@ ${kernel} void SphericalParticle_GeoUpdate(
 			${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
 
 			%if dim == 2:
-				s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+//				s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
 			%else:
 				s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
 				s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
@@ -423,11 +435,14 @@ ${kernel} void SphericalParticle_GeoUpdate(
 				const float rho = 1.0f;
 				float ${nvec('dr')}, v0[${dim}];
 
-				drx = px - prev_r0x;
-				dry = py - prev_r0y;
-				${if3d('drz = pz - prev_r0z;')}
+				## BIG FAT WARNING
+				## FIXME: use prev_r0 and prev_ prefix here.
 
-				${local_part_velocity('prev_')}
+				drx = px - r0x;
+				dry = py - r0y;
+				${if3d('drz = pz - r0z;')}
+
+				${local_part_velocity('')}
 
 				%for local_var in bgk_equilibrium_vars:
 					float ${cex(local_var.lhs)} = ${cex(local_var.rhs, vectors=True)};
@@ -441,10 +456,10 @@ ${kernel} void SphericalParticle_GeoUpdate(
 				// to maintain momentum balance.
 				s_force_x[thread_id] = -rho * (ivx[gi] - v0[0]);
 				s_force_y[thread_id] = -rho * (ivy[gi] - v0[1]);
-				${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
+				${if3d('s_force_z[thread_id] = -rho * (ivz[gi] - v0[2]);')}
 
 				%if dim == 2:
-					s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+//					s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
 				%else:
 					s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
 					s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
@@ -465,12 +480,12 @@ ${kernel} void FSI_SumPartialForceTorques(${global_ptr} float *iforce, ${global_
 	const unsigned int gid = get_global_id(0);
 
 	float *s_force_x = shared;
-	float *s_force_y = s_force_x + get_group_size(0);
-	float *s_torque_x = s_force_y + get_group_size(0);
+	float *s_force_y = s_force_x + get_local_size(0);
+	float *s_torque_x = s_force_y + get_local_size(0);
 	%if dim == 3:
-		float *s_force_z = s_torque_x + get_group_size(0);
-		float *s_torque_y = s_force_z + get_group_size(0);
-		float *s_torque_z = s_torque_y + get_group_size(0);
+		float *s_force_z = s_torque_x + get_local_size(0);
+		float *s_torque_y = s_force_z + get_local_size(0);
+		float *s_torque_z = s_torque_y + get_local_size(0);
 	%endif
 
 	s_force_x[tid] = iforce[gid];
@@ -549,22 +564,29 @@ ${kernel} void FSI_Move(${global_ptr} float *pos, ${global_ptr} float *vel,
 	float lpos, lang, lvel, lavel;
 
 	%for idim in range(0, dim):
-		lpos = pos[i];
-		lang = pos[i];
-		lvel = vel[i];
-		lavel = avel[i];
+		%if idim == 0 or dim > 2:
+			// Angular
+			lang = ang[i];
+			lavel = avel[i];
+			lavel += torque[i] / (79.0f * 25.0f / 2.0f);
+			torque[i] = 0.0f;
+			ang[i] = lang + lavel;
+			avel[i] = lavel;
+		%endif
 
+		// cylinder: m r^2 / 2
+		// sphere: 2 m r^2 / 5
+
+		// Linear
+		lpos = pos[i];
+		lvel = vel[i];
 		// FIXME: This assumes the mass and the moment of inertia to be equal to 1.
-		lvel += force[i];
-		lavel += torque[i];
+		lvel += force[i] / 79.0f;
 
 		pos[i] = lpos + lvel;
-		ang[i] = lang + lavel;
 		vel[i] = lvel;
-		avel[i] = lavel;
 
 		force[i] = 0.0f;
-		torque[i] = 0.0f;
 
 		i += ${fsi_stride};
 	%endfor

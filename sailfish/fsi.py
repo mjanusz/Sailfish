@@ -166,4 +166,4 @@ class SphericalParticle(FSIObject):
                 (scale_x + scale_y) / 2)
         pygame.draw.line(surf, (255, 0, 0), (pos_x, sh - pos_y),
                 (pos_x + self.radius * scale_x * math.cos(ang[0]),
-                 sh - pos_y + self.radius * scale_y * math.sin(ang[0])))
+                 sh - pos_y - self.radius * scale_y * math.sin(ang[0])))

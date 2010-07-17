@@ -129,6 +129,7 @@ cmaps = {
 class Fluid2DVis(vis.FluidVis):
     _color_unused = (128, 128, 128)
     _color_wall = (255, 255, 255)
+    _color_bnd = (0, 255, 255)
 
     VIS_LINEAR = 0
     VIS_FLUCTUATION = 1
@@ -239,6 +240,7 @@ class Fluid2DVis(vis.FluidVis):
         dec_map = self.sim.geo._decode_node_type(self.geo_map)
         wall_map = (dec_map == self.sim.geo.NODE_WALL)
         unused_map = (dec_map == self.sim.geo.NODE_UNUSED)
+        bnd_map = (dec_map == self.sim.geo.NODE_BOUNDARY)
 
         field = self.field
         ret.append('%s' % field.name)
@@ -285,8 +287,7 @@ class Fluid2DVis(vis.FluidVis):
             g = gauss_kernel(2, sizey=2)
             fs = map(lambda x: signal.convolve(x, g, mode='same'), fs)
 
-
-        srf2 = self._draw_field(fs, srf, wall_map, unused_map, width, height)
+        srf2 = self._draw_field(fs, srf, wall_map, unused_map, bnd_map, width, height)
         pygame.transform.scale(srf2, self._screen.get_size(), self._screen)
         sw, sh = self._screen.get_size()
 
@@ -317,7 +318,7 @@ class Fluid2DVis(vis.FluidVis):
 
         return ret
 
-    def _draw_field(self, fields, srf, wall_map, unused_map, width, height):
+    def _draw_field(self, fields, srf, wall_map, unused_map, bnd_map, width, height):
         fv = []
 
         # Rotate the field to the correct position.
@@ -328,14 +329,17 @@ class Fluid2DVis(vis.FluidVis):
 
         wall_map = numpy.rot90(wall_map, 3)
         unused_map = numpy.rot90(unused_map, 3)
+        bnd_map = numpy.rot90(bnd_map, 3)
 
         if self._show_walls:
             # Draw the walls.
             a[wall_map] = self._color_wall
             a[unused_map] = self._color_unused
+            a[bnd_map] = self._color_bnd
 
         n = len(fields)
-        fluid_map = numpy.logical_not(numpy.logical_or(wall_map, unused_map))
+        fluid_map = numpy.logical_not(numpy.logical_or(numpy.logical_or(wall_map,
+            unused_map), bnd_map))
         field = cmaps[n][self._cmap[n]](*fv)
         a[fluid_map] = field[fluid_map]
 

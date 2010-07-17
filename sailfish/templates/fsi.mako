@@ -250,24 +250,30 @@ ${kernel} void ProcessParticleForceAndTorque(${global_ptr} unsigned int *map,
 		s_torque_z[thread_id] = 0.0f;
 	%endif
 
-	int pcode = map[gi];
-	int ptype = decodeNodeType(pcode);
+	if (gx >= 0 && gx <= ${lat_nx-1} && gy >= 0 && gy <= ${lat_ny-1}
+		%if dim == 3:
+			&& gz >= 0 && gz <= ${lat_nz-1}
+		%endif
+	) {
+		int pcode = map[gi];
+		int ptype = decodeNodeType(pcode);
 
-	if (ptype == ${geo_boundary}) {
-		unsigned int lobj_id, dir_mask;
-		decodeBoundaryNode(pcode, &lobj_id, &dir_mask);
+		if (ptype == ${geo_boundary}) {
+			unsigned int lobj_id, dir_mask;
+			decodeBoundaryNode(pcode, &lobj_id, &dir_mask);
 
-		// Make sure the force is acting on the object that is being processed
-		// in this thread.
-		if (obj_id == lobj_id) {
-			s_force_x[thread_id] = fsi_force[gi];
-			s_force_y[thread_id] = fsi_force[gi + ${dist_size}];
-			s_torque_x[thread_id] = fsi_torque[gi];
-			%if dim == 3:
-				s_force_z[thread_id] = fsi_force[gi + ${2*dist_size}];
-				s_torque_y[thread_id] = fsi_torque[gi + ${dist_size}];
-				s_torque_z[thread_id] = fsi_torque[gi + ${2*dist_size}];
-			%endif
+			// Make sure the force is acting on the object that is being processed
+			// in this thread.
+			if (obj_id == lobj_id) {
+				s_force_x[thread_id] = fsi_force[gi];
+				s_force_y[thread_id] = fsi_force[gi + ${dist_size}];
+				s_torque_x[thread_id] = fsi_torque[gi];
+				%if dim == 3:
+					s_force_z[thread_id] = fsi_force[gi + ${2*dist_size}];
+					s_torque_y[thread_id] = fsi_torque[gi + ${dist_size}];
+					s_torque_z[thread_id] = fsi_torque[gi + ${2*dist_size}];
+				%endif
+			}
 		}
 	}
 
@@ -356,106 +362,42 @@ ${kernel} void SphericalParticle_GeoUpdate(
 	gy += (int)p0y;
 	${if3d('gz += (int)p0z;')}
 
-	int gi = gx + gy*${arr_nx};
-	%if dim == 3:
-		gi += ${arr_nx*arr_ny}*gz;
-	%endif
+	if (gx >= 0 && gx <= ${lat_nx-1} && gy >= 0 && gy <= ${lat_ny-1}
+		%if dim == 3:
+			&& gz >= 0 && gz <= ${lat_nz-1}
+		%endif
+	) {
+		int gi = gx + gy*${arr_nx};
+		%if dim == 3:
+			gi += ${arr_nx*arr_ny}*gz;
+		%endif
 
-	int pcode = map[gi];
-	int ptype = decodeNodeType(pcode);
+		int pcode = map[gi];
+		int ptype = decodeNodeType(pcode);
 
-	// If the node is inside the particle, simply mark it as unused.
-	if (SphericalParticle_isinside(${nvec('p')}, ${nvec('r0')}, radius)) {
-		if (ptype != ${geo_unused}) {
-			map[gi] = encodeNode(${geo_unused}, obj_id);
-			// Node becomes covered by the particle -- update the force and torque
-			// acting on the particle to maintain momentum balance.
-
-			// JStatPhys 113 3/4 (2003)
-			// F = rho * (u - u_r)
-			// T = (x - x_COM) x F
-
-			// FIXME: Assumes rho0 = 1.0.
-			float ${nvec('dr')}, v0[${dim}];
-
-			drx = px - r0x;
-			dry = py - r0y;
-			${if3d('drz = pz - r0z;')}
-
-			${local_part_velocity()}
-
-			s_force_x[thread_id] = ivx[gi] - v0[0];
-			s_force_y[thread_id] = ivy[gi] - v0[1];
-			${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
-
-			%if dim == 2:
-				s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
-			%else:
-				s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
-				s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
-				s_torque_z[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
-			%endif
-		} else {
-			int pobj = decodeNodeMisc(pcode);
-			if (pobj != obj_id) {
+		// If the node is inside the particle, simply mark it as unused.
+		if (SphericalParticle_isinside(${nvec('p')}, ${nvec('r0')}, radius)) {
+			if (ptype != ${geo_unused}) {
 				map[gi] = encodeNode(${geo_unused}, obj_id);
-			}
-		}
-	// Node is outside of the particle.
-	} else {
-		int pobj = decodeNodeMisc(pcode);
-		unsigned int bmask = 0;
-		// Scan all neighboring nodes.  Find ones that are inside the particle
-		// and mark their directions as those across which momentum is transferred.
-		float tx, ty ${if3d(', tz')};
-		%for i, dr in enumerate(grid.basis[1:]):
-			tx = px + ${dr[0]};
-			ty = py + ${dr[1]};
-			%if dim == 3:
-				tz = pz + ${dr[2]};
-			%endif
+				// Node becomes covered by the particle -- update the force and torque
+				// acting on the particle to maintain momentum balance.
 
-			if (SphericalParticle_isinside(${nvec('t')}, ${nvec('r0')}, radius)) {
-				bmask |= (1 << ${i});
-			}
-		%endfor
+				// JStatPhys 113 3/4 (2003)
+				// F = rho * (u - u_r)
+				// T = (x - x_COM) x F
 
-		if (bmask == 0) {
-			map[gi] = encodeNode(${geo_fluid}, 0);
-		} else {
-			map[gi] = encodeBoundaryNode(bmask, obj_id);
-
-			// If this node was inside the particle before but is now uncovered,
-			// initialize its distributions with equilibrium values from the previous
-			// time step.
-			if (ptype == ${geo_unused} && pobj == obj_id) {
-				## FIXME: This assumes rho0 = 1, which is not necessarily the case
-				## and does not work for binary fluids.
-				const float rho = 1.0f;
+				// FIXME: Assumes rho0 = 1.0.
 				float ${nvec('dr')}, v0[${dim}];
-
-				## BIG FAT WARNING
-				## FIXME: use prev_r0 and prev_ prefix here.
 
 				drx = px - r0x;
 				dry = py - r0y;
 				${if3d('drz = pz - r0z;')}
 
-				${local_part_velocity('')}
+				${local_part_velocity()}
 
-				%for local_var in bgk_equilibrium_vars:
-					float ${cex(local_var.lhs)} = ${cex(local_var.rhs, vectors=True)};
-				%endfor
-
-				%for i, (feq, idx) in enumerate(bgk_equilibrium[0]):
-					${get_odist('dist1_out', i)} = ${cex(feq, vectors=True)};
-				%endfor
-
-				// Node becomes uncovered.  Modify the torque and force on the particle
-				// to maintain momentum balance.
-				s_force_x[thread_id] = -rho * (ivx[gi] - v0[0]);
-				s_force_y[thread_id] = -rho * (ivy[gi] - v0[1]);
-				${if3d('s_force_z[thread_id] = -rho * (ivz[gi] - v0[2]);')}
+				s_force_x[thread_id] = ivx[gi] - v0[0];
+				s_force_y[thread_id] = ivy[gi] - v0[1];
+				${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
 
 				%if dim == 2:
 					s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
@@ -464,6 +406,76 @@ ${kernel} void SphericalParticle_GeoUpdate(
 					s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
 					s_torque_z[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
 				%endif
+			} else {
+				int pobj = decodeNodeMisc(pcode);
+				if (pobj != obj_id) {
+					map[gi] = encodeNode(${geo_unused}, obj_id);
+				}
+			}
+		// Node is outside of the particle.
+		} else {
+			int pobj = decodeNodeMisc(pcode);
+			unsigned int bmask = 0;
+			// Scan all neighboring nodes.  Find ones that are inside the particle
+			// and mark their directions as those across which momentum is transferred.
+			float tx, ty ${if3d(', tz')};
+			%for i, dr in enumerate(grid.basis[1:]):
+				tx = px + ${dr[0]};
+				ty = py + ${dr[1]};
+				%if dim == 3:
+					tz = pz + ${dr[2]};
+				%endif
+
+				if (SphericalParticle_isinside(${nvec('t')}, ${nvec('r0')}, radius)) {
+					bmask |= (1 << ${i});
+				}
+			%endfor
+
+			if (bmask == 0) {
+				map[gi] = encodeNode(${geo_fluid}, 0);
+			} else {
+				map[gi] = encodeBoundaryNode(bmask, obj_id);
+
+				// If this node was inside the particle before but is now uncovered,
+				// initialize its distributions with equilibrium values from the previous
+				// time step.
+				if (ptype == ${geo_unused} && pobj == obj_id) {
+					## FIXME: This assumes rho0 = 1, which is not necessarily the case
+					## and does not work for binary fluids.
+					const float rho = 1.0f;
+					float ${nvec('dr')}, v0[${dim}];
+
+					## BIG FAT WARNING
+					## FIXME: use prev_r0 and prev_ prefix here.
+
+					drx = px - r0x;
+					dry = py - r0y;
+					${if3d('drz = pz - r0z;')}
+
+					${local_part_velocity('')}
+
+					%for local_var in bgk_equilibrium_vars:
+						float ${cex(local_var.lhs)} = ${cex(local_var.rhs, vectors=True)};
+					%endfor
+
+					%for i, (feq, idx) in enumerate(bgk_equilibrium[0]):
+						${get_odist('dist1_out', i)} = ${cex(feq, vectors=True)};
+					%endfor
+
+					// Node becomes uncovered.  Modify the torque and force on the particle
+					// to maintain momentum balance.
+					s_force_x[thread_id] = -rho * (ivx[gi] - v0[0]);
+					s_force_y[thread_id] = -rho * (ivy[gi] - v0[1]);
+					${if3d('s_force_z[thread_id] = -rho * (ivz[gi] - v0[2]);')}
+
+					%if dim == 2:
+						s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+					%else:
+						s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
+						s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
+						s_torque_z[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+					%endif
+				}
 			}
 		}
 	}

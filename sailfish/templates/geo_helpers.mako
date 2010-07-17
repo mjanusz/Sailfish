@@ -28,7 +28,7 @@ ${device_func} inline bool isUnusedNode(int type) {
 }
 
 ${device_func} inline bool isFluidNode(int type) {
-	return type == ${geo_fluid};
+	return (type == ${geo_fluid});
 }
 
 ${device_func} inline bool isWallNode(int type) {
@@ -88,7 +88,7 @@ ${device_func} inline unsigned int decodeNodeOrientation(unsigned int code) {
 }
 
 ${device_func} inline unsigned int decodeNodeParam(unsigned int code) {
-	return (code >> ${geo_misc_shift}) & ${(1 << (geo_param_shift+1))-1};
+	return (code >> ${geo_misc_shift}) & ${(1 << (geo_param_shift))-1};
 }
 
 ${device_func} inline unsigned int encodeBoundaryNode(unsigned int dir_mask, unsigned int obj_id) {
@@ -98,7 +98,7 @@ ${device_func} inline unsigned int encodeBoundaryNode(unsigned int dir_mask, uns
 ${device_func} inline void decodeBoundaryNode(unsigned int code, unsigned int *obj_id,
 											  unsigned int *dir_mask)
 {
-	*obj_id = (code >> ${geo_misc_shift}) & ${(1 << (geo_obj_shift+1))-1};;
+	*obj_id = (code >> ${geo_misc_shift}) & ${(1 << (geo_obj_shift))-1};;
 	*dir_mask = code >> ${geo_misc_shift + geo_obj_shift};
 }
 

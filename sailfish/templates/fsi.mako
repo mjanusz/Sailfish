@@ -432,7 +432,9 @@ ${kernel} void SphericalParticle_GeoUpdate(
 			%endfor
 
 			if (bmask == 0) {
-				map[gi] = encodeNode(${geo_fluid}, 0);
+				if (isBoundaryNode(ptype) || isUnusedNode(ptype)) {
+					map[gi] = encodeNode(${geo_fluid}, 0);
+				}
 			} else {
 				map[gi] = encodeBoundaryNode(bmask, obj_id);
 

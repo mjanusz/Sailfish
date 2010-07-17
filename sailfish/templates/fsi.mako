@@ -118,12 +118,11 @@
 					%endif
 
 					%if dim == 2:
-						// TODO: Verify this.
-						torquex += drx * forcey - dry * forcex;
+						torquex += delta_m * (drx * ${ei[1]} - dry * ${ei[0]});
 					%else:
-						torquex += dry * forcez - drz * forcey;
-						torquey += drz * forcex - drx * forcez;
-						torquez += drx * forcey - dry * forcex;
+						torquex += delta_m * (dry * ${ei[2]} - drz * ${ei[1]});
+						torquey += delta_m * (drz * ${ei[0]} - drx * ${ei[2]});
+						torquez += delta_m * (drx * ${ei[1]} - dry * ${ei[0]});
 					%endif
 
 					drx -= ${ei[0]};
@@ -390,7 +389,7 @@ ${kernel} void SphericalParticle_GeoUpdate(
 			${if3d('s_force_z[thread_id] = ivz[gi] - v0[2];')}
 
 			%if dim == 2:
-//				s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+				s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
 			%else:
 				s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
 				s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];
@@ -459,7 +458,7 @@ ${kernel} void SphericalParticle_GeoUpdate(
 				${if3d('s_force_z[thread_id] = -rho * (ivz[gi] - v0[2]);')}
 
 				%if dim == 2:
-//					s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
+					s_torque_x[thread_id] = drx * s_force_y[thread_id] - dry * s_force_x[thread_id];
 				%else:
 					s_torque_x[thread_id] = dry * s_force_z[thread_id] - drz * s_force_y[thread_id];
 					s_torque_y[thread_id] = drz * s_force_x[thread_id] - drx * s_force_z[thread_id];

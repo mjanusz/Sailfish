@@ -546,6 +546,13 @@ class LBMSim(object):
         return (int(math.ceil(num_objs / 32.0) * 32 * t), t)
 
     def _init_fsi(self):
+
+        max_blocks = 0
+        for i, obj in enumerate(self.geo.fsi_objects):
+            max_blocks = max(max_blocks, obj.grid_size[0] * obj.grid_size[1])
+
+        self.fsi_partial_blocks = max_blocks
+
         if not self.has_fsi():
             return
 
@@ -586,12 +593,6 @@ class LBMSim(object):
         self._fsi_vel[:] = numpy.transpose(self.float(vel))
         self._fsi_ang[:] = numpy.transpose(self.float(ang))
         self._fsi_avel[:] = numpy.transpose(self.float(avel))
-
-        max_blocks = 0
-        for i, obj in enumerate(self.geo.fsi_objects):
-            max_blocks = max(max_blocks, obj.grid_size[0] * obj.grid_size[1])
-
-        self.fsi_partial_blocks = max_blocks
 
     def _update_ctx(self, ctx):
         pass
@@ -1026,11 +1027,11 @@ class LBMSim(object):
                 obj_id = numpy.uint32(i)
 
                 if self.grid.dim == 3:
-                    args[-5:] = [self.float(bbox.x0), self.float(bbox.x1),
-                                 self.float(bbox.x2), obj_id_np,
+                    args[-5:] = [self.float(bbox.x0), self.float(bbox.y0),
+                                 self.float(bbox.z0), obj_id_np,
                                  numpy.uint32(bbox.x1 - bbox.x0)]
                 else:
-                    args[-3:] = [self.float(bbox.x0), self.float(bbox.x1),
+                    args[-3:] = [self.float(bbox.x0), self.float(bbox.y0),
                                  obj_id]
 
                 self.backend.run_kernel(self.fsi_kern_process_node_force_torque,
@@ -1062,7 +1063,6 @@ class LBMSim(object):
                 self.backend.from_buf(self.gpu_fsi_pos)
                 self.backend.from_buf(self.gpu_fsi_ang)
                 self.backend.from_buf(self.gpu_fsi_vel)
-                self.backend.from_buf(self.gpu_fsi_avel)
                 self.backend.sync()
 
                 # Update the geometry to reflect particle movement.

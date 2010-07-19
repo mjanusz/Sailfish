@@ -150,7 +150,7 @@
 
 	// Sum the individual contributions to the force and torque from the whole block.
 	// This is a parallel reduction operation.
-	for (unsigned int i = get_local_size(0) * get_local_size(1) / 2; i > ${warp_size}; i >>= 1) {
+	for (unsigned int i = get_local_size(0) * get_local_size(1) / 2; i > 0; i >>= 1) {
 		if (thread_id < i) {
 			s_force_x[thread_id] += s_force_x[thread_id + i];
 			s_force_y[thread_id] += s_force_y[thread_id + i];
@@ -165,7 +165,7 @@
 	}
 
 	// FIXME: Figure out what to do with this in OpenCL.
-	if (thread_id < ${warp_size}) {
+/*	if (thread_id < ${warp_size}) {
 		warpReduce(s_force_x, thread_id);
 		warpReduce(s_force_y, thread_id);
 		warpReduce(s_torque_x, thread_id);
@@ -175,7 +175,7 @@
 			warpReduce(s_torque_z, thread_id);
 		%endif
 	}
-
+*/
 	if (thread_id == 0) {
 		const int gid = get_group_id(0) + get_group_size(0) * get_group_id(1);
 		partial_force[gid] = s_force_x[0];
@@ -351,9 +351,9 @@ ${kernel} void SphericalParticle_GeoUpdate(
 	%endif
 
 	// Global simulation coordinates of the node processed by this thread.
-	float px = p0x + int2float(gx);
-	float py = p0y + int2float(gy);
-	${if3d('float pz = p0z + int2float(gz);')}
+	float px = p0x + (float)(gx);
+	float py = p0y + (float)(gy);
+	${if3d('float pz = p0z + (float)(gz);')}
 
 	// Transform gx and gy into global coordinates (in the whole simulation domain
 	// instead of just in the bounding box).

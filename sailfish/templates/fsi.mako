@@ -358,18 +358,18 @@ ${kernel} void SphericalParticle_GeoUpdate(
 	// Transform gx and gy into global coordinates (in the whole simulation domain
 	// instead of just in the bounding box).
 	// TODO: use float2int here?
-	gx += (int)p0x;
-	gy += (int)p0y;
-	${if3d('gz += (int)p0z;')}
+	int grx = gx + (int)p0x;
+	int gry = gy + (int)p0y;
+	${if3d('int grz = gz + (int)p0z;')}
 
-	if (gx >= 0 && gx <= ${lat_nx-1} && gy >= 0 && gy <= ${lat_ny-1}
+	if (grx >= 0 && grx <= ${lat_nx-1} && gry >= 0 && gry <= ${lat_ny-1}
 		%if dim == 3:
-			&& gz >= 0 && gz <= ${lat_nz-1}
+			&& grz >= 0 && grz <= ${lat_nz-1}
 		%endif
 	) {
-		int gi = gx + gy*${arr_nx};
+		int gi = grx + gry*${arr_nx};
 		%if dim == 3:
-			gi += ${arr_nx*arr_ny}*gz;
+			gi += ${arr_nx*arr_ny}*grz;
 		%endif
 
 		int pcode = map[gi];
@@ -420,10 +420,15 @@ ${kernel} void SphericalParticle_GeoUpdate(
 			// and mark their directions as those across which momentum is transferred.
 			float tx, ty ${if3d(', tz')};
 			%for i, dr in enumerate(grid.basis[1:]):
-				tx = px + ${dr[0]};
-				ty = py + ${dr[1]};
+				## The parentheses below are important!  Without them the whole sum is
+				## done using floating point numbers, which can lead to inconsistencies
+				## with the result of the SphericalParticle_isinside call above, which
+				## in turn might cause the particle to have a 2-node thick boundary on
+				## one side, leading to spurious acceleration.
+				tx = p0x + (gx + ${dr[0]});
+				ty = p0y + (gy + ${dr[1]});
 				%if dim == 3:
-					tz = pz + ${dr[2]};
+					tz = pz + (gz + ${dr[2]});
 				%endif
 
 				if (SphericalParticle_isinside(${nvec('t')}, ${nvec('r0')}, radius)) {

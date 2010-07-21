@@ -190,6 +190,18 @@
 </%def>
 
 %if fsi_enabled:
+
+${const_var} float fsi_moi[] = {
+%for obj in sim.geo.fsi_objects:
+	${obj.moi}f,
+%endfor
+};
+${const_var} float fsi_mass[] = {
+%for obj in sim.geo.fsi_objects:
+	${obj.mass}f,
+%endfor
+};
+
 ${device_func} void warpReduce(volatile float *sdata, int idx)
 {
 	sdata[idx] += sdata[idx + 32];
@@ -586,20 +598,17 @@ ${kernel} void FSI_Move(${global_ptr} float *pos, ${global_ptr} float *vel,
 			// Angular
 			lang = ang[i];
 			lavel = avel[i];
-			lavel += torque[i] / (79.0f * 25.0f / 2.0f);
+			lavel += torque[i] / fsi_moi[get_global_id(0)];
 			torque[i] = 0.0f;
 			ang[i] = lang + lavel;
 			avel[i] = lavel;
 		%endif
 
-		// cylinder: m r^2 / 2
-		// sphere: 2 m r^2 / 5
-
 		// Linear
 		lpos = pos[i];
 		lvel = vel[i];
 		// FIXME: This assumes the mass and the moment of inertia to be equal to 1.
-		lvel += force[i] / 79.0f;
+		lvel += force[i] / fsi_mass[get_global_id(0)];
 
 		pos[i] = lpos + lvel;
 		vel[i] = lvel;

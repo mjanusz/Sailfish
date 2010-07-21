@@ -27,8 +27,9 @@ class LBMGeoLDC(geo.LBMGeo2D):
         # walls
         self.set_geo(wall_map, self.NODE_WALL)
 
-        self.add_fsi_object(fsi.SphericalParticle(self.sim, 1.0, (self.lat_nx/2,
-            self.lat_ny/2), (0.0, 0.0), 0.0, 0.0, 5.0))
+        self.add_fsi_object(fsi.SphericalParticle(self.sim,
+            (self.lat_nx/2, self.lat_ny/2), (0.0, 0.0), 0.0, 0.0, 5.0,
+            density=2.0))
 
     def init_dist(self, dist):
         hy, hx = np.mgrid[0:self.lat_ny, 0:self.lat_nx]

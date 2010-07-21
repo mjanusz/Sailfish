@@ -69,9 +69,10 @@ def partial_block_grid(sim, bbox):
 
 
 class FSIObject(object):
-    def __init__(self, sim, mass, position, velocity, orientation, ang_velocity):
+    def __init__(self, sim, mass, moi, position, velocity, orientation, ang_velocity):
         self.sim = sim
         self.mass = mass
+        self.moi = moi
         self.position = position
         self.velocity = velocity
         self.orientation = orientation
@@ -84,7 +85,6 @@ class FSIObject(object):
         self.grid_size = grid_size
         self.shmem = shmem
 
-
     def draw_2d(self, surf):
         pass
 
@@ -92,9 +92,17 @@ class FSIObject(object):
         pass
 
 class SphericalParticle(FSIObject):
-    def __init__(self, sim, mass, position, velocity, orientation, ang_velocity, radius):
+    def __init__(self, sim, position, velocity, orientation, ang_velocity, radius, density=1.0):
         self.radius = radius
-        super(SphericalParticle, self).__init__(sim, mass, position, velocity, orientation, ang_velocity)
+
+        # Mass and moment of inertia of a 3D and 2D sphere.
+        if sim.grid.dim == 3:
+            mass = 4.0 * math.pi * radius**3 / 3.0
+            moi = 2.0 * mass * radius**2 / 5.0
+        else:
+            mass = math.pi * radius**2 * density
+            moi = mass * radius**2 / 2.0
+        super(SphericalParticle, self).__init__(sim, mass, moi, position, velocity, orientation, ang_velocity)
 
     def bounding_box(self, position, orientation):
         x0 = position[0] - self.radius - 1

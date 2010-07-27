@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+
+<Description>CUDA/OpenCL kernels from the Sailfish project.</Description>
+<Library>sailfish.so</Library>
+<AcceptsMultipleDomains>false</AcceptsMultipleDomains>
+<DataProcessors>
+	<Processor>
+		<Name>CollideAndStreamBGK_D2Q9_Single</Name>
+        <Id>1</Id>
+        <Efficiency>50.0</Efficiency>
+    </Processor>
+	<Processor>
+		<Name>CollideAndStreamMRT_D2Q9_Single</Name>
+        <Id>2</Id>
+        <Efficiency>50.0</Efficiency>
+    </Processor>
+</DataProcessors>

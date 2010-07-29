@@ -9,15 +9,17 @@ int main(int argc, char **argv)
 {
 	void *handle;
 	void (*initializeDomain)(int, void*, int*, void*);
-    char *error;
+	char *error;
 
-    handle = dlopen("sailfish.so", RTLD_LAZY);
-    if (!handle) {
+	// The flags here are important, if RTLD_GLOBAL is missing, some Python
+	// modules will not work.
+	handle = dlopen("plb_sailfish.so", RTLD_LAZY | RTLD_GLOBAL);
+	if (!handle) {
 		cerr << dlerror() << endl;
 		exit(EXIT_FAILURE);
-    }
+	}
 
-    dlerror();
+	dlerror();
 
 	*(void **) (&initializeDomain) = dlsym(handle, "initializeDomain");
 	if ((error = dlerror()) != NULL)  {

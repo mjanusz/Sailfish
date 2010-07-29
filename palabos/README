@@ -1,1 +1,3 @@
 An experimental Sailfish-based Palabos plugin.
+
+In order to compile, define PALABOS_ROOT so that it points to the Palabos sources.

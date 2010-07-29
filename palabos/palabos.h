@@ -29,12 +29,6 @@ struct D2Q9_DistF
 	void *unused;
 };
 
-struct PalabosDomainDesc
-{
-	int nx, ny, nz;
-	void *data;
-};
-
 struct BGKParams
 {
 	float tau;

@@ -31,19 +31,10 @@ float getEfficiency(int processorId)
 	return 25.0f;
 }
 
-int initializeDomain(int processorId, void *dataPtr, int *extent, void *processorParams)
+int D2Q9_Prepare(int *velocity_permutation)
 {
-	// If i-th element of this array is j, then i-th Sailfish basis vector corresponds
-	// to Palabos vector number j.
-	int velocity_permutation[9] = {-1};
-	char *argv[1] = {"dummy"};
-
-	Py_Initialize();
-	PySys_SetArgv(1, argv);
-	PyObject *pTmp, *pModule, *pName;
-
 	// Calculate the velocity permutation array.
-	pModule = PyImport_ImportModule("sailfish.sym");
+	PyObject *pModule = PyImport_ImportModule("sailfish.sym");
 
 	if (pModule == NULL) {
 		PyErr_Print();
@@ -100,10 +91,56 @@ int initializeDomain(int processorId, void *dataPtr, int *extent, void *processo
 
 	Py_DECREF(pBasis);
 	Py_DECREF(pGrid);
+	Py_DECREF(pModule);
+}
 
-	Py_Finalize();
+int initializeDomain(int processorId, void *dataPtr, int *extent, void *processorParams)
+{
+	// If i-th element of this array is j, then i-th Sailfish basis vector corresponds
+	// to Palabos vector number j.
+	int velocity_permutation[9] = {-1};
+	char *argv[1] = {"dummy"};
+
+	Py_Initialize();
+	PySys_SetArgv(1, argv);
+
+	if (processorId < 2) {
+		if (D2Q9_Prepare(velocity_permutation)) {
+			return 1;
+		}
+
+		int nx = extent[0];
+		int ny = extent[1];
+
+		// FIXME: This isn't really right -- need to include Sailfish padding as well.
+		// Possibly just get a reference to a numpy array from Python?
+		float *slf_dists = (float*)malloc(sizeof(float) * nx * ny * 9);
+		bool *slf_mask = (bool*)malloc(sizeof(bool) * nx * ny);
+
+		struct D2Q9_DistF *grid_data = (struct D2Q9_DistF*) dataPtr;
+
+		for (int y = 0; y < ny; y++) {
+			for (int x = 0; x < nx; x++) {
+				int i = y * nx + x;
+				slf_mask[i] = grid_data[i].mask;
+
+				for (int j = 0; j < 9; j++) {
+					slf_dists[i + nx * ny * j] = grid_data[i].dist[velocity_permutation[j]];
+				}
+			}
+		}
+
+		if (processorId == 1) {
+			struct BGKParams *params = (struct BGKParams*)processorParams;
+		}
+	}
 
 	return 0;
+}
+
+void cleanUp()
+{
+	Py_Finalize();
 }
 
 void refreshDomains()

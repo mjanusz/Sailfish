@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 
 <Description>CUDA/OpenCL kernels from the Sailfish project.</Description>
-<Library>sailfish.so</Library>
+<Library>plb_sailfish.so</Library>
 <AcceptsMultipleDomains>false</AcceptsMultipleDomains>
 <DataProcessors>
 	<Processor>

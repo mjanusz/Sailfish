@@ -1,19 +1,27 @@
 """Base class for all lattice Boltzman simulations in Sailfish."""
+<<<<<<< HEAD
 
 from collections import namedtuple
 from sailfish import sym
 
 import numpy as np
 
+=======
+from sailfish import sym
+
+>>>>>>> Remove lbm.py, add TODO comments to lb_base.py
 __author__ = 'Michal Januszewski'
 __email__ = 'sailfish-cfd@googlegroups.com'
 __license__ = 'LGPL'
 __version__ = '0.3-alpha1'
 
 
+<<<<<<< HEAD
 FieldPair = namedtuple('FieldPair', 'abstract buffer')
 
 
+=======
+>>>>>>> Remove lbm.py, add TODO comments to lb_base.py
 class LBSim(object):
     """Describes a specific type of a lattice Boltzmann simulation."""
 

@@ -1,0 +1,229 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sailfish internals &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="next" title="Examples and test cases" href="testcases.html" />
+    <link rel="prev" title="Performance Tuning" href="performance.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="testcases.html" title="Examples and test cases"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="performance.html" title="Performance Tuning"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sailfish-internals">
+<h1>Sailfish internals<a class="headerlink" href="#sailfish-internals" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="architecture-overview">
+<h2>Architecture overview<a class="headerlink" href="#architecture-overview" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="simulation-definition">
+<h3>Simulation definition<a class="headerlink" href="#simulation-definition" title="Permalink to this headline">¶</a></h3>
+<p>Every Sailfish simulation is defined in terms of a simulation class,
+typically inheriting from <tt class="xref py py-class docutils literal"><span class="pre">LBFluidSim</span></tt> (or more generally, from
+<tt class="xref py py-class docutils literal"><span class="pre">LBSim</span></tt>).  In this class:</p>
+<ul class="simple">
+<li>additional simulation options can be defined in <tt class="xref py py-func docutils literal"><span class="pre">LBSim.add_options()</span></tt></li>
+<li>default values for any simulation parameters can be specified in
+<tt class="xref py py-func docutils literal"><span class="pre">LBSim.update_defaults()</span></tt></li>
+<li>simulation configuration can be altered after command-line parsing in
+<tt class="xref py py-func docutils literal"><span class="pre">LBSim.modify_config()</span></tt></li>
+<li>additional setup (e.g. adding body forces) can be performed in the <tt class="docutils literal"><span class="pre">__init__</span></tt>
+method (make sure to call the <tt class="docutils literal"><span class="pre">__init__</span></tt> method of all base classes at the
+beginning of your function)</li>
+<li>boundary and intitial conditions are defined by setting the <tt class="xref py py-attr docutils literal"><span class="pre">subdomain</span></tt> attribute to a child of
+<tt class="xref py py-class docutils literal"><span class="pre">Subdomain</span></tt> (typically <tt class="xref py py-class docutils literal"><span class="pre">Subdomain2D</span></tt> and <tt class="xref py py-class docutils literal"><span class="pre">Subdomain3D</span></tt>)</li>
+</ul>
+<p>The global domain of a Sailfish simulation is always a rectangle (2D) or a
+cuboid (3D), which automatically establishes a global Cartesian
+coordinate system.  The distance between two neighboring lattice nodes
+is the distance unit.  The domain can be sparse (not all nodes in the
+cuboid exist) and subdivided into smaller units (subdomains).  This is accomplished
+via a child class of <tt class="xref py py-class docutils literal"><span class="pre">LBGeometry</span></tt> (or its specializations
+<tt class="xref py py-class docutils literal"><span class="pre">LBGeometry2D</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">LBGeometry3D</span></tt>).  This class:</p>
+<ul class="simple">
+<li>specifies domain decomposition into subdomains (<tt class="xref py py-func docutils literal"><span class="pre">LBGeometry.blocks()</span></tt>)</li>
+<li>defines options specific to the global simulation geometry</li>
+<li>provides access to the global domain size via the <tt class="xref py py-attr docutils literal"><span class="pre">LBGeometry2D.gx</span></tt>,
+<tt class="xref py py-attr docutils literal"><span class="pre">LBGeometry2D.gy</span></tt>, and <tt class="xref py py-attr docutils literal"><span class="pre">LBGeometry3D.gz</span></tt> attributes</li>
+</ul>
+<p><tt class="xref py py-func docutils literal"><span class="pre">LBGeometry.blocks()</span></tt> returns a list of <tt class="xref py py-class docutils literal"><span class="pre">SubdomainSpec</span></tt> objects.
+This makes it possible build a refined, hierarchical grid (to be implemented;
+by increasing node density in some subdomains) and to define a sparse domain
+(by returning objects covering only a part of the global coordinate system).</p>
+<p>Boundary conditions and initial values of macroscopic fields (density, velocity,
+etc) are specified in the <tt class="xref py py-func docutils literal"><span class="pre">Subdomain.boundary_conditions()</span></tt> and
+<tt class="xref py py-func docutils literal"><span class="pre">Subdomain.initial_conditions()</span></tt> methods, respectively.  These methods will
+be called with <tt class="docutils literal"><span class="pre">hx</span></tt>, <tt class="docutils literal"><span class="pre">hy</span></tt> and <tt class="docutils literal"><span class="pre">hz</span></tt> objects, which are numpy coordinate
+arrays indicating nodes for which values are to be set.  The values in these
+arrays are always in the <em>global</em> coordinate system.  The arrays should be used
+as index objects when accessing field arrays in Sailfish or specifying
+boundary conditions.  Your code in <tt class="xref py py-func docutils literal"><span class="pre">Subdomain.boundary_conditions()</span></tt> and
+<tt class="xref py py-func docutils literal"><span class="pre">Subdomain.initial_conditions()</span></tt> should always define the global geometry and
+make no assumptions about its division into subdomains.  In particular, the
+Sailfish framework might arbitrarily subdivide your domain into multiple
+subdomains to distribute the work among many computational units.</p>
+</div>
+<div class="section" id="simulation-execution">
+<h3>Simulation execution<a class="headerlink" href="#simulation-execution" title="Permalink to this headline">¶</a></h3>
+<p>Sailfish is designed to run fluid simulations in a distributed and hybrid
+environment, spreading work between multiple machines and GPUs.</p>
+<p>The simulation execution begins with an instance of <tt class="xref py py-class docutils literal"><span class="pre">LBSimulationController</span></tt>.</p>
+</div>
+</div>
+<div class="section" id="from-the-command-line-to-a-running-simulation">
+<h2>From the command line to a running simulation<a class="headerlink" href="#from-the-command-line-to-a-running-simulation" title="Permalink to this headline">¶</a></h2>
+<p>This section explains what happens in the first few seconds after you
+start executing your simulation script and before the simulation is
+actually running.</p>
+</div>
+<div class="section" id="distributed-execution">
+<h2>Distributed execution<a class="headerlink" href="#distributed-execution" title="Permalink to this headline">¶</a></h2>
+<p>A distributed simulation is started by the controller mapping subdomains to
+available nodes (as specified in a cluster definition files).  This is followed
+by establishing an SSH connection to all nodes to which at least one block has been
+assigned.  Once the connection is established, the <tt class="docutils literal"><span class="pre">execnet</span></tt> module is used to
+(optionally) sync files from the controller host to the node, and to execute the
+<tt class="xref py py-func docutils literal"><span class="pre">_start_cluster_machine_master()</span></tt> function to start a <tt class="xref py py-class docutils literal"><span class="pre">LBMachineMaster</span></tt>
+on each node.  The masters and the controller are then linked by an execnet channel.</p>
+<p>Each master starts a <tt class="xref py py-class docutils literal"><span class="pre">LBBlockRunner</span></tt> for each of its subdomains.  The runners
+are executed as subprocesses, and they communicate with the master using zeromq
+IPC connections.  For each connected subdomain pair, one of the subdomains starts a listening
+zeromq TCP socket with a random port.  This port is then communicated to the master,
+which forwards it to the controller.  Once all runners have started, the controller
+builds a global port map, which is then sent through the masters to all runners, which
+use it to establish two-way connections between all connected subdomain pairs.</p>
+</div>
+<div class="section" id="inside-a-simulation">
+<h2>Inside a simulation<a class="headerlink" href="#inside-a-simulation" title="Permalink to this headline">¶</a></h2>
+<p>This section explains the data structures and data flow of a live
+simulation.</p>
+</div>
+<div class="section" id="template-overview-and-conventions">
+<h2>Template overview and conventions<a class="headerlink" href="#template-overview-and-conventions" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="specifying-configuration-options">
+<h2>Specifying configuration options<a class="headerlink" href="#specifying-configuration-options" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Sailfish internals</a><ul>
+<li><a class="reference internal" href="#architecture-overview">Architecture overview</a><ul>
+<li><a class="reference internal" href="#simulation-definition">Simulation definition</a></li>
+<li><a class="reference internal" href="#simulation-execution">Simulation execution</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#from-the-command-line-to-a-running-simulation">From the command line to a running simulation</a></li>
+<li><a class="reference internal" href="#distributed-execution">Distributed execution</a></li>
+<li><a class="reference internal" href="#inside-a-simulation">Inside a simulation</a></li>
+<li><a class="reference internal" href="#template-overview-and-conventions">Template overview and conventions</a></li>
+<li><a class="reference internal" href="#specifying-configuration-options">Specifying configuration options</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="performance.html"
+                        title="previous chapter">Performance Tuning</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="testcases.html"
+                        title="next chapter">Examples and test cases</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/internals.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="testcases.html" title="Examples and test cases"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="performance.html" title="Performance Tuning"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,207 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Setting up simulations &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="up" title="Tutorial" href="tutorial.html" />
+    <link rel="next" title="Distributed simulations on a cluster" href="distributed_simulations.html" />
+    <link rel="prev" title="Running simulations" href="running_simulations.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="distributed_simulations.html" title="Distributed simulations on a cluster"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="running_simulations.html" title="Running simulations"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="setting-up-simulations">
+<h1>Setting up simulations<a class="headerlink" href="#setting-up-simulations" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="mapping-physical-quantities-to-simulation-parameters">
+<h2>Mapping physical quantities to simulation parameters<a class="headerlink" href="#mapping-physical-quantities-to-simulation-parameters" title="Permalink to this headline">¶</a></h2>
+<p>Having a good grasp of how choosing lattice-Boltzmann parameters such as grid size, numerical
+viscosity and maximum velocity affects the results is essential for running simulations
+efficiently and for interpreting their results.  The mapping between physical quantities
+describing a system and their corresponding counterparts in the simulation is often
+a source of unnecessary confusion.  In this section, we will show how to do it and
+how different choices of various simulation parameters impact the precision of the
+results and simulation time.</p>
+<p>Throughout this section, we will be working with a specific physical system that
+we will be using as an example.  We choose a 2D system with the following parameters:</p>
+<ul class="simple">
+<li>width: 2 m</li>
+<li>height <img class="math" src="_images/math/859ccf4cd60c7bc6b8fa1afc9a42dc811a826d6f.png" alt="L"/>: 1 m</li>
+<li>flow speed <img class="math" src="_images/math/929f46ae6fad917fafca848db72c69552711ef49.png" alt="u_{phys}"/>: 10 m/s</li>
+<li>Reynolds number <img class="math" src="_images/math/16ef95610462b9c2c03cba4c272fe84208bf3c61.png" alt="Re"/>: 1000</li>
+</ul>
+<p>We will now want to determine the lattice size <img class="math" src="_images/math/fb9dd665822536d7bcca369c98bc979aad49c605.png" alt="2N \times N"/>,
+numerical viscosity <img class="math" src="_images/math/5d5e8e7a863c83783dcee26feb5c9ce0b3d07847.png" alt="\nu_{lb}"/> and the lattice time step size
+<img class="math" src="_images/math/ca48805b7ba3867c768ed349f6ebaad853438576.png" alt="\Delta t \,[\mathrm{s / lt}]"/> in physical units.</p>
+<p>In lattice units, a single time step of the simulation is by definition 1 lt, and the
+space between two lattice nodes is 1 lu.</p>
+<p>The following simple relations will prove to be very useful in the next subsections:</p>
+<ul class="simple">
+<li>the lattice spacing: <img class="math" src="_images/math/8502c5d31a60b0a35477978c917b3ddcf1964fb4.png" alt="\Delta x = L / (N-1) \,[\mathrm{m / lu}]"/></li>
+<li>the lattice flow speed: <img class="math" src="_images/math/6aa7ed748780b34c4e2b53b8177399b969696fb8.png" alt="u_{lb} = \frac{\Delta t}{\Delta x} u_{phys}"/></li>
+<li>the lattice viscosity: <img class="math" src="_images/math/7edcde8f68970d3ea500bf0c387c8e9e1e696779.png" alt="\nu_{lb} = \frac{\Delta t}{\Delta x^2} \frac{u_{phys} L}{Re} = \frac{u_{lb} (N-1) }{\mathrm{Re}}"/></li>
+</ul>
+<div class="section" id="assuming-a-known-lattice-size-and-reynolds-number">
+<h3>Assuming a known lattice size and Reynolds number<a class="headerlink" href="#assuming-a-known-lattice-size-and-reynolds-number" title="Permalink to this headline">¶</a></h3>
+<p>Let&#8217;s choose a lattice of 101x201 nodes.  This sets the lattice
+spacing to <img class="math" src="_images/math/b7303ce1fe22da9f89b0b222255966e7a3af171a.png" alt="\Delta x = 0.01 \,\mathrm{m/lu}"/>.  We know the Reynolds number, which is 1000, but
+we need one more constraint to calculate the size of the time step and the numerical
+viscosity.  The constraint we need is the maximum lattice flow speed.  The flow speed
+can never exceed the lattice speed of sound <img class="math" src="_images/math/38493d9e2862d15f4041e6da2a5cbb7c0269f14e.png" alt="c_s"/>, which is <img class="math" src="_images/math/26c3e321990af2e217483e5bcbd6956a98b1c8d8.png" alt="1/\sqrt{3}"/> lu/lt
+for the D2Q9 lattice.  It will in fact have to be much lower than that, since the
+Lattice Boltzmann model only works in the limit of low Mach numbers.  The highest
+relatively safe value used in practice is 0.1 lu/lt, and this is what we are going
+to use for calculation.  Setting:</p>
+<div class="math">
+<p><img src="_images/math/489adad514388ca1c03c5fb73f39553f3ae9345f.png" alt="10 \,\mathrm{\frac{m}{s}} = 0.1 \,\mathrm{\frac{lu}{lt}} \frac{\Delta x}{\Delta t}"/></p>
+</div><p>we can easily calculate the time step size, which is <img class="math" src="_images/math/24d842d6433c326e596b310377068a37c721af14.png" alt="\Delta t = 10^{-4} \,\mathrm{s / lt}"/>
+and the lattice viscosity <img class="math" src="_images/math/644cb067cbef36e11bb5ddb56ee1d002d7972d0e.png" alt="\nu_{lb} = 10^{-2} \,\mathrm{\frac{lu^2}{lt}}"/>.</p>
+<p>If we wanted to simulate a flow of a duration of 1 s, we would need 10000 iterations,
+which corresponds to approximately
+<img class="math" src="_images/math/2e3c64390d812c97fa715ad88fbf6a39bcf50c29.png" alt="100 \times 200 \times 10000 = 2 \cdot 10^{8}"/> lattice node updates.</p>
+<p>It is also easy to see that the size of the time step scales linearly with the maximum
+velocity, i.e. if we decrease the maximum flow speed 10 times, we will need to run the
+simulation 10 times longer to reach the physical time of 1s.  We will also need to decrease
+the numerical viscosity <img class="math" src="_images/math/5d5e8e7a863c83783dcee26feb5c9ce0b3d07847.png" alt="\nu_{lb}"/> 10 times in order to make sure we&#8217;re simulating the same
+physical system.</p>
+</div>
+<div class="section" id="assuming-a-known-numerical-viscosity-and-reynolds-number">
+<h3>Assuming a known numerical viscosity and Reynolds number<a class="headerlink" href="#assuming-a-known-numerical-viscosity-and-reynolds-number" title="Permalink to this headline">¶</a></h3>
+<p>Starting with a known numerical viscosity will some times make sense, as all
+LB models have a limited range of viscosities for which they are stable.  Let&#8217;s start
+with a value of <img class="math" src="_images/math/7c3f6cf4217f89fc51595767b5d5a1f1ca3954a5.png" alt="\nu_{lb} = 0.1 \,\mathrm{\frac{lu^2}{lt}}"/> and <img class="math" src="_images/math/eeae0b932b4b04f4932d2ba82155f351b2b987d3.png" alt="Re = 1000"/> as above.  We will need to determine
+the lattice spacing and time step size.  Using the lattice viscosity and lattice flow
+speed equations we get, respectively: <img class="math" src="_images/math/80024855325d9ce6619bfc1bf6c15a9af1c4ef4b.png" alt="0.1 \,\mathrm{\frac{lu^2}{lt}} = \frac{\Delta t}{\Delta x^2} 0.01 \,\mathrm{\frac{m^2}{s}}"/>
+and <img class="math" src="_images/math/68d6f6f2d41e734968034e0f4811b961727eee57.png" alt="0.1 \,\mathrm{\frac{lu}{lt}} = \frac{\Delta t}{\Delta x} 10 \,\mathrm{\frac{m}{s}}"/>, which we can easily solve to get
+<img class="math" src="_images/math/beef2b63542a20c8b5c799a60d07c06fd92d4c7d.png" alt="\Delta x = 10^{-3} \,\mathrm{m / lu}"/> and <img class="math" src="_images/math/b45e9190af1f0a1ecd79a570421c4015c183b0e7.png" alt="\Delta t = 10^{-5} \,\mathrm{s / lt}"/>.</p>
+<p>To get a physical duration of 1 s, we thus need <img class="math" src="_images/math/e7d8b576968ccdbfeff38053b7c606905adb945e.png" alt="10^5"/> iterations on a lattice of
+<img class="math" src="_images/math/da3675f1b2ade74dfa082685e31bac1c8e577ba7.png" alt="1001 \times 2001"/> or <img class="math" src="_images/math/e85e62c9496fb01f40dcade1a9c8a30c7cf2c973.png" alt="2 \cdot 10^{11}"/> lattice node updates.  The price
+to pay for the increased stability and precision of the simulation is a larger lattice
+and much longer simulation time.</p>
+<p>By decreasing the viscosity by a factor of 10, we could increase both the step size
+and the time step size by a factor of 10, and thus cut the overall simulation time
+by a factor of <img class="math" src="_images/math/904f9084f42eb25076a2c9c06d7fb8e402fea693.png" alt="10^3"/> (or <img class="math" src="_images/math/ed99f78014bdf57b62e04864d28c977b06fb23ed.png" alt="10^4"/> for 3D simulations).</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Setting up simulations</a><ul>
+<li><a class="reference internal" href="#mapping-physical-quantities-to-simulation-parameters">Mapping physical quantities to simulation parameters</a><ul>
+<li><a class="reference internal" href="#assuming-a-known-lattice-size-and-reynolds-number">Assuming a known lattice size and Reynolds number</a></li>
+<li><a class="reference internal" href="#assuming-a-known-numerical-viscosity-and-reynolds-number">Assuming a known numerical viscosity and Reynolds number</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="running_simulations.html"
+                        title="previous chapter">Running simulations</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="distributed_simulations.html"
+                        title="next chapter">Distributed simulations on a cluster</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/simulation_setup.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="distributed_simulations.html" title="Distributed simulations on a cluster"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="running_simulations.html" title="Running simulations"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

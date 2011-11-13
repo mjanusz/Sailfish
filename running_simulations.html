@@ -65,12 +65,12 @@ example, which is one of the standard test cases in computational fluid dynamics
 <div class="section" id="the-program-outline">
 <h2>The program outline<a class="headerlink" href="#the-program-outline" title="Permalink to this headline">¶</a></h2>
 <p>In order to build a Sailfish simulation, we create a new Python script.
-In this script, we need to import the <a class="reference internal" href="api.html#module-lbm" title="lbm"><tt class="xref py py-mod docutils literal"><span class="pre">lbm</span></tt></a> and <a class="reference internal" href="api.html#module-geo" title="geo"><tt class="xref py py-mod docutils literal"><span class="pre">geo</span></tt></a> Sailfish
+In this script, we need to import the <tt class="xref py py-mod docutils literal"><span class="pre">lbm</span></tt> and <a class="reference internal" href="api.html#module-geo" title="geo"><tt class="xref py py-mod docutils literal"><span class="pre">geo</span></tt></a> Sailfish
 modules:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">sailfish</span> <span class="kn">import</span> <span class="n">lbm</span><span class="p">,</span> <span class="n">geo</span>
 </pre></div>
 </div>
-<p>The <a class="reference internal" href="api.html#module-lbm" title="lbm"><tt class="xref py py-mod docutils literal"><span class="pre">lbm</span></tt></a> module contains a class which will drive our simulation, and the <a class="reference internal" href="api.html#module-geo" title="geo"><tt class="xref py py-mod docutils literal"><span class="pre">geo</span></tt></a>
+<p>The <tt class="xref py py-mod docutils literal"><span class="pre">lbm</span></tt> module contains a class which will drive our simulation, and the <a class="reference internal" href="api.html#module-geo" title="geo"><tt class="xref py py-mod docutils literal"><span class="pre">geo</span></tt></a>
 module contains classes used to describe the geometry of the simulation.  We will start
 by defining the main driver class for our example, and return to the issue of
 geometry later.</p>
@@ -86,7 +86,7 @@ is its <tt class="docutils literal"><span class="pre">__init__</span></tt> metho
 line arguments and stores the simulation settings in <tt class="docutils literal"><span class="pre">self.options</span></tt> (using the standard
 Python <a class="reference external" href="http://docs.python.org/library/optparse.html#module-optparse" title="(in Python v2.7)"><tt class="xref py py-mod docutils literal"><span class="pre">optparse</span></tt></a> module).  The <tt class="docutils literal"><span class="pre">__init__</span></tt> method takes a single argument by default
 &#8211; the class representing the simulation geometry.</p>
-<p>That class needs to be derived from either <a class="reference internal" href="api.html#geo.LBMGeo2D" title="geo.LBMGeo2D"><tt class="xref py py-class docutils literal"><span class="pre">geo.LBMGeo2D</span></tt></a> or <a class="reference internal" href="api.html#geo.LBMGeo3D" title="geo.LBMGeo3D"><tt class="xref py py-class docutils literal"><span class="pre">geo.LBMGeo3D</span></tt></a>, depending
+<p>That class needs to be derived from either <tt class="xref py py-class docutils literal"><span class="pre">geo.LBMGeo2D</span></tt> or <tt class="xref py py-class docutils literal"><span class="pre">geo.LBMGeo3D</span></tt>, depending
 on the dimensionality of the problem at hand.  In our present case, we will
 use the former one.  The derived geometry class needs to define at least the following
 two methods: <tt class="docutils literal"><span class="pre">define_nodes</span></tt> and <tt class="docutils literal"><span class="pre">init_dist</span></tt>.</p>
@@ -96,9 +96,9 @@ and can be accessed via its attributes <tt class="docutils literal"><span class=
 (size along the Y axis) and <tt class="docutils literal"><span class="pre">lat_nz</span></tt> (size along the Z axis, for 2D simulations always
 equal to 1).</p>
 <p>By default, the whole domain is initialized as fluid nodes.  To define the geometry, we
-need to redefine some of the nodes using the <a class="reference internal" href="api.html#geo.LBMGeo.NODE_WALL" title="geo.LBMGeo.NODE_WALL"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_WALL</span></tt></a>, <a class="reference internal" href="api.html#geo.LBMGeo.NODE_VELOCITY" title="geo.LBMGeo.NODE_VELOCITY"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_VELOCITY</span></tt></a> or
-<a class="reference internal" href="api.html#geo.LBMGeo.NODE_PRESSURE" title="geo.LBMGeo.NODE_PRESSURE"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_PRESSURE</span></tt></a> class constants.  <a class="reference internal" href="api.html#geo.LBMGeo.NODE_WALL" title="geo.LBMGeo.NODE_WALL"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_WALL</span></tt></a> represents a no-slip condition at a
-stationary domain boundary.  <a class="reference internal" href="api.html#geo.LBMGeo.NODE_VELOCITY" title="geo.LBMGeo.NODE_VELOCITY"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_VELOCITY</span></tt></a> and <a class="reference internal" href="api.html#geo.LBMGeo.NODE_PRESSURE" title="geo.LBMGeo.NODE_PRESSURE"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_PRESSURE</span></tt></a> represent a
+need to redefine some of the nodes using the <tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_WALL</span></tt>, <tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_VELOCITY</span></tt> or
+<tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_PRESSURE</span></tt> class constants.  <tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_WALL</span></tt> represents a no-slip condition at a
+stationary domain boundary.  <tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_VELOCITY</span></tt> and <tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_PRESSURE</span></tt> represent a
 boundary condition with specified velocity or pressure, respectively.  To redefine
 the nodes, we will use the <tt class="docutils literal"><span class="pre">set_geo(location,</span> <span class="pre">type,</span> <span class="pre">data)</span></tt> function.  Here, <tt class="docutils literal"><span class="pre">location</span></tt>
 is either a tuple representing the location of the node to update, or a NumPy Boolean
@@ -155,7 +155,7 @@ simulation:</p>
 </div>
 <div class="section" id="how-it-works-behind-the-scenes">
 <h2>How it works behind the scenes<a class="headerlink" href="#how-it-works-behind-the-scenes" title="Permalink to this headline">¶</a></h2>
-<p>When the <a class="reference internal" href="api.html#lbm.LBMSim.run" title="lbm.LBMSim.run"><tt class="xref py py-func docutils literal"><span class="pre">lbm.LBMSim.run()</span></tt></a> method is called, Sailfish instantiates the geometry class (this
+<p>When the <tt class="xref py py-func docutils literal"><span class="pre">lbm.LBMSim.run()</span></tt> method is called, Sailfish instantiates the geometry class (this
 process can take a few seconds for 3D simulations with complex <tt class="docutils literal"><span class="pre">init_dist()</span></tt> and
 <tt class="docutils literal"><span class="pre">define_nodes()</span></tt> functions.  It then uses the Mako template engine and the information
 from the options and the geometry class to generate the code for the compute
@@ -180,7 +180,7 @@ read and can work automatically with new grids and models.</li>
 </div>
 <div class="section" id="using-the-command-line-arguments">
 <h2>Using the command-line arguments<a class="headerlink" href="#using-the-command-line-arguments" title="Permalink to this headline">¶</a></h2>
-<p>The base class for Sailfish simulations (<a class="reference internal" href="api.html#lbm.LBMSim" title="lbm.LBMSim"><tt class="xref py py-class docutils literal"><span class="pre">lbm.LBMSim</span></tt></a>) defines a large number of command line
+<p>The base class for Sailfish simulations (<tt class="xref py py-class docutils literal"><span class="pre">lbm.LBMSim</span></tt>) defines a large number of command line
 options which can be used to control the simulation.  To get a full list of currently supported
 options, run any Sailfish simulation with the <tt class="docutils literal"><span class="pre">--help</span></tt> command line option.  Some of the
 basic settings you might want to play with when starting to work with Sailfish are as follows:</p>
@@ -209,7 +209,7 @@ understand at first, as they mix three languages: Python, the Mako template lang
 CUDA C.  To avoid this complexity, you might want to save the generated compute device code
 and inspect it in a text editor.  The generated code will be automatically formatted to be
 readable unless the <tt class="docutils literal"><span class="pre">--noformat_src</span></tt> option is specified.  The command used to format the
-code can be redefined by overriding the <a class="reference internal" href="api.html#lbm.LBMSim.format_cmd" title="lbm.LBMSim.format_cmd"><tt class="xref py py-attr docutils literal"><span class="pre">lbm.LBMSim.format_cmd</span></tt></a> value.  The default one
+code can be redefined by overriding the <tt class="xref py py-attr docutils literal"><span class="pre">lbm.LBMSim.format_cmd</span></tt> value.  The default one
 requires the <tt class="docutils literal"><span class="pre">indent</span></tt> utility and is set so that the generated code roughly follows the
 formatting style of the Linux kernel (with longer lines, which can be useful for complex expressions).</p>
 </div>

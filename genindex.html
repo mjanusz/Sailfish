@@ -56,21 +56,16 @@
  <a href="#A"><strong>A</strong></a>
  | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
- | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
- | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
- | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
- | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
- | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
- | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
  
 </div>
@@ -78,17 +73,7 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#lbm.LBMSim.add_body_force">add_body_force() (lbm.LBMSim method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.add_force_object">add_force_object() (geo.LBMGeo method)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.add_iter_hook">add_iter_hook() (lbm.LBMSim method)</a>
+  <dt><a href="api.html#lb_single.LBForcedSim.add_body_force">add_body_force() (lb_single.LBForcedSim method)</a>
   </dt>
 
   </dl></td>
@@ -105,12 +90,22 @@
   <dt><a href="api.html#sym.bgk_equilibrium">bgk_equilibrium() (in module sym)</a>
   </dt>
 
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="api.html#sym.bgk_external_force">bgk_external_force() (in module sym)</a>
   </dt>
 
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="api.html#geo.LBGeometry2D.blocks">blocks() (geo.LBGeometry2D method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="api.html#geo.LBGeometry3D.blocks">(geo.LBGeometry3D method)</a>
+  </dt>
+
+      </dl></dd>
       
   <dt><a href="api.html#sym.body_force_accel">body_force_accel() (in module sym)</a>
   </dt>
@@ -123,44 +118,6 @@
   <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="api.html#sym.cexpr">cexpr() (in module sym)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.clear_hooks">clear_hooks() (lbm.LBMSim method)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.count_active_nodes">count_active_nodes() (geo.LBMGeo method)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.define_nodes">define_nodes() (geo.LBMGeo method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.dim">dim (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.dist">dist (lbm.LBMSim attribute)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.dt">dt (lbm.LBMSim attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.dx">dx (geo.LBMGeo attribute)</a>
   </dt>
 
   </dl></td>
@@ -186,34 +143,6 @@
   </dl></td>
 </tr></table>
 
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.filename">filename (lbm.LBMSim attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.fill_dist">fill_dist() (geo.LBMGeo method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.fill_geo">fill_geo() (geo.LBMGeo method)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.force">force() (geo.LBMGeo method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.format_cmd">format_cmd (lbm.LBMSim attribute)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
@@ -222,55 +151,29 @@
   </dt>
 
       
-  <dt><a href="api.html#lbm.get_backends">get_backends() (in module lbm)</a>
+  <dt><a href="api.html#lb_single.LBFluidSim.get_compute_kernels">get_compute_kernels() (lb_single.LBFluidSim method)</a>
   </dt>
 
+      
+  <dt><a href="api.html#sym.get_interblock_dists">get_interblock_dists() (in module sym)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="api.html#sym.get_prop_dists">get_prop_dists() (in module sym)</a>
   </dt>
 
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#lbm.LBMSim.get_reduction">get_reduction() (lbm.LBMSim method)</a>
+  <dt><a href="api.html#lb_base.LBSim.grid">grid (lb_base.LBSim attribute)</a>
   </dt>
 
-      
-  <dt><a href="api.html#geo.LBMGeo.get_reynolds">get_reynolds() (geo.LBMGeo method)</a>
+      <dd><dl>
+        
+  <dt><a href="api.html#lb_single.LBFluidSim.grid">(lb_single.LBFluidSim attribute)</a>
   </dt>
 
-      
-  <dt><a href="api.html#lbm.get_vis_engines">get_vis_engines() (in module lbm)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
-<h2 id="H">H</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.Hook">Hook (class in lbm)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.hostsync_density">hostsync_density() (lbm.LBMSim method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.hostsync_dist">hostsync_dist() (lbm.LBMSim method)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.hostsync_tracers">hostsync_tracers() (lbm.LBMSim method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.hostsync_velocity">hostsync_velocity() (lbm.LBMSim method)</a>
-  </dt>
-
+      </dl></dd>
   </dl></td>
 </tr></table>
 
@@ -278,31 +181,7 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#geo.LBMGeo.ic_fields">ic_fields (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
   <dt><a href="api.html#sym.TargetDist.idx">idx (sym.TargetDist attribute)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.init_dist">init_dist() (geo.LBMGeo method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.init_fields">init_fields() (geo.LBMGeo method)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
-<h2 id="K">K</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.kernel_file">kernel_file (lbm.LBMSim attribute)</a>
   </dt>
 
   </dl></td>
@@ -316,49 +195,37 @@
   </dt>
 
       
-  <dt><a href="api.html#module-lbm">lbm (module)</a>
+  <dt><a href="api.html#module-lb_base">lb_base (module)</a>
   </dt>
 
       
-  <dt><a href="api.html#geo.LBMBC">LBMBC (class in geo)</a>
+  <dt><a href="api.html#module-lb_single">lb_single (module)</a>
   </dt>
 
       
-  <dt><a href="api.html#geo.LBMGeo">LBMGeo (class in geo)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo2D">LBMGeo2D (class in geo)</a>
+  <dt><a href="api.html#lb_single.LBFluidSim">LBFluidSim (class in lb_single)</a>
   </dt>
 
       
-  <dt><a href="api.html#geo.LBMGeo3D">LBMGeo3D (class in geo)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim">LBMSim (class in lbm)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
-<h2 id="M">M</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.make_field">make_field() (lbm.LBMSim method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.mask_array_by_fluid">mask_array_by_fluid() (geo.LBMGeo method)</a>
+  <dt><a href="api.html#lb_single.LBForcedSim">LBForcedSim (class in lb_single)</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#geo.NodeInfo.misc">misc (geo.NodeInfo attribute)</a>
+  <dt><a href="api.html#geo.LBGeometry">LBGeometry (class in geo)</a>
+  </dt>
+
+      
+  <dt><a href="api.html#geo.LBGeometry2D">LBGeometry2D (class in geo)</a>
+  </dt>
+
+      
+  <dt><a href="api.html#geo.LBGeometry3D">LBGeometry3D (class in geo)</a>
+  </dt>
+
+      
+  <dt><a href="api.html#lb_base.LBSim">LBSim (class in lb_base)</a>
   </dt>
 
   </dl></td>
@@ -368,37 +235,7 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#geo.LBMGeo.NODE_BOUNDARY">NODE_BOUNDARY (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.NODE_FLUID">NODE_FLUID (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.NODE_PRESSURE">NODE_PRESSURE (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.NODE_SLIP">NODE_SLIP (geo.LBMGeo attribute)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.NODE_UNUSED">NODE_UNUSED (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.NODE_VELOCITY">NODE_VELOCITY (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.NODE_WALL">NODE_WALL (geo.LBMGeo attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.NodeInfo">NodeInfo (class in geo)</a>
+  <dt><a href="api.html#lb_base.LBSim.nonlocality">nonlocality (lb_base.LBSim attribute)</a>
   </dt>
 
   </dl></td>
@@ -424,22 +261,6 @@
   </dl></td>
 </tr></table>
 
-<h2 id="R">R</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.reset">reset() (geo.LBMGeo method)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.run">run() (lbm.LBMSim method)</a>
-  </dt>
-
-  </dl></td>
-</tr></table>
-
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
@@ -448,27 +269,11 @@
   </dt>
 
       
-  <dt><a href="api.html#geo.LBMGeo.set_geo">set_geo() (geo.LBMGeo method)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#geo.LBMGeo.set_geo_from_bool_array">set_geo_from_bool_array() (geo.LBMGeo method)</a>
-  </dt>
-
-      
   <dt><a href="api.html#sym.shallow_water_equilibrium">shallow_water_equilibrium() (in module sym)</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#lbm.LBMSim.sim_info">sim_info (lbm.LBMSim attribute)</a>
-  </dt>
-
-      
-  <dt><a href="api.html#lbm.LBMSim.sim_step">sim_step() (lbm.LBMSim method)</a>
-  </dt>
-
       
   <dt><a href="api.html#module-sym">sym (module)</a>
   </dt>
@@ -483,14 +288,14 @@
   <dt><a href="api.html#sym.TargetDist">TargetDist (class in sym)</a>
   </dt>
 
-      
-  <dt><a href="api.html#lbm.LBMSim.time">time (lbm.LBMSim attribute)</a>
-  </dt>
-
   </dl></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#geo.NodeInfo.type">type (geo.NodeInfo attribute)</a>
+  <dt><a href="api.html#lb_base.LBSim.update_context">update_context() (lb_base.LBSim method)</a>
   </dt>
 
   </dl></td>
@@ -501,12 +306,6 @@
   <td style="width: 33%" valign="top"><dl>
       
   <dt><a href="api.html#sym.TargetDist.var">var (sym.TargetDist attribute)</a>
-  </dt>
-
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
-      
-  <dt><a href="api.html#geo.LBMGeo.velocity_to_dist">velocity_to_dist() (geo.LBMGeo method)</a>
   </dt>
 
   </dl></td>

@@ -3,7 +3,10 @@ Sailfish API
 
 Simulation
 ----------
-.. automodule:: lbm
+.. automodule:: lb_base
+   :members:
+
+.. automodule:: lb_single
    :members:
 
 Geometry

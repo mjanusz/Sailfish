@@ -1,0 +1,178 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Distributed simulations on a cluster &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="up" title="Tutorial" href="tutorial.html" />
+    <link rel="next" title="Supported models, grids and boundary conditions" href="models.html" />
+    <link rel="prev" title="Setting up simulations" href="simulation_setup.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="models.html" title="Supported models, grids and boundary conditions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="simulation_setup.html" title="Setting up simulations"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="distributed-simulations-on-a-cluster">
+<h1>Distributed simulations on a cluster<a class="headerlink" href="#distributed-simulations-on-a-cluster" title="Permalink to this headline">¶</a></h1>
+<p>Sailfish suports running simulations across multiple hosts.  The following
+requirements have to be fulfilled in order for this to work:</p>
+<ul class="simple">
+<li>the user needs an SSH account on each machine,</li>
+<li>all node machines need to be able to connect to each other using TCP connections.</li>
+</ul>
+<p>A distributed Sailfish simulation is started just like a local simulation,
+the only difference being the presence of the <tt class="docutils literal"><span class="pre">cluster_spec</span></tt> config parameter, whose
+value is a path to a cluster definition file.  If hte path is relative, the controller
+will look for it in the current working directory as well as in the <tt class="docutils literal"><span class="pre">.sailfish</span></tt>
+directory in the user&#8217;s home.</p>
+<p>Optionally, the <tt class="docutils literal"><span class="pre">cluster_sync</span></tt>
+argument can also be specifed to automatically sync files from the controller to
+the nodes.  A common value to use here is <tt class="docutils literal"><span class="pre">$PWD:.</span></tt>, which means &#8220;sync the contents
+of the current directory (<tt class="docutils literal"><span class="pre">$PWD</span></tt>) to the working directory on every node (<tt class="docutils literal"><span class="pre">.</span></tt>)&#8221;.</p>
+<div class="section" id="cluster-definition-files">
+<h2>Cluster definition files<a class="headerlink" href="#cluster-definition-files" title="Permalink to this headline">¶</a></h2>
+<p>A cluster definition file is a Python script that contains a global <tt class="docutils literal"><span class="pre">nodes</span></tt> list
+of <tt class="xref py py-class docutils literal"><span class="pre">MachineSpec</span></tt> instances.  Each <tt class="xref py py-class docutils literal"><span class="pre">MachineSpec</span></tt> defines a cluster node.
+Here is sample file defining two nodes:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">sailfish.config</span> <span class="kn">import</span> <span class="n">MachineSpec</span>
+
+<span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">MachineSpec</span><span class="p">(</span><span class="s">&#39;ssh=user1@hosta//chdir=/home/user1/sailfish-cluster&#39;</span><span class="p">,</span>
+            <span class="s">&#39;hosta&#39;</span><span class="p">,</span> <span class="n">cuda_nvcc</span><span class="o">=</span><span class="s">&#39;/usr/local/cuda/bin/nvcc&#39;</span><span class="p">,</span>
+            <span class="n">gpus</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span>
+        <span class="n">MachineSpec</span><span class="p">(</span><span class="s">&#39;ssh=user2@hostb//chdir=/home/user2/sailfish-cluster&#39;</span><span class="p">,</span>
+            <span class="s">&#39;hostb&#39;</span><span class="p">,</span> <span class="n">cuda_nvcc</span><span class="o">=</span><span class="s">&#39;/usr/local/cuda/bin/nvcc&#39;</span><span class="p">,</span>
+            <span class="n">gpus</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>The two nodes are located on <tt class="docutils literal"><span class="pre">hosta</span></tt> and <tt class="docutils literal"><span class="pre">hostb</span></tt> respectively, and different
+users are used to get access to both hosts.  The <tt class="docutils literal"><span class="pre">cuda_nvcc</span></tt> and <tt class="docutils literal"><span class="pre">block_size</span></tt>
+parameters are standard Sailfish config parameters than can be specified from the
+command line for single-host simulations.  Here we use them to provide a location
+of the NVCC compiler and to use a larger CUDA block size on <tt class="docutils literal"><span class="pre">hostb</span></tt> (e.g. because
+it has Fermi-generation GPUs).  The first argument of <tt class="xref py py-class docutils literal"><span class="pre">MachineSpec</span></tt> is an
+execnet address string.  See the execnet documentation for more information about all
+supported features.  For common configurations, just modifying the above example should
+work fine.</p>
+<p>Note that each node definition contains a list of available GPUs.  This information
+is used for load-balancing purposes.  By default, only the first available GPU (<tt class="docutils literal"><span class="pre">[0]</span></tt>)
+will be used, even on a multi-GPU machine.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Distributed simulations on a cluster</a><ul>
+<li><a class="reference internal" href="#cluster-definition-files">Cluster definition files</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="simulation_setup.html"
+                        title="previous chapter">Setting up simulations</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="models.html"
+                        title="next chapter">Supported models, grids and boundary conditions</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/distributed_simulations.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="models.html" title="Supported models, grids and boundary conditions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="simulation_setup.html" title="Setting up simulations"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

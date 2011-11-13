@@ -1,0 +1,237 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Supported models, grids and boundary conditions &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="next" title="Performance Tuning" href="performance.html" />
+    <link rel="prev" title="Simulation results processing" href="results.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="performance.html" title="Performance Tuning"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="results.html" title="Simulation results processing"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="supported-models-grids-and-boundary-conditions">
+<h1>Supported models, grids and boundary conditions<a class="headerlink" href="#supported-models-grids-and-boundary-conditions" title="Permalink to this headline">¶</a></h1>
+<p>The Sailfish solver currently supports the following Lattice-Boltzmann models and grids:</p>
+<ul class="simple">
+<li>single fluid<ul>
+<li>two-dimensional: D2Q9 (BGK, MRT models)</li>
+<li>three-dimensional: D3Q13 (MRT), D3Q15, D3Q19 (BGK, MRT models)</li>
+</ul>
+</li>
+<li>binary fluid<ul>
+<li>two-dimensional: Shan-Chen (D2Q9), free-energy (D2Q9, BGK, MRT) <a class="reference internal" href="#pre78">[PRE78]</a></li>
+<li>three-dimensional: Shan-Chen, free-energy (D3Q19, BGK, MRT)</li>
+</ul>
+</li>
+</ul>
+<table class="docutils citation" frame="void" id="pre78" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[PRE78]</a></td><td>Contact line dynamics in binary lattice Boltzmann simulations, Phys. Rev. E 78, 056709 (2008). DOI: 10.1103/PhysRevE.78.056709</td></tr>
+</tbody>
+</table>
+<p>The single fluid models are implemented in both the incompressible and weakly compressible version, the
+latter of which is the default.  To turn on the incompressible model, use the <tt class="docutils literal"><span class="pre">--incompressible</span></tt>
+command line switch.</p>
+<p>An external force field (body force) can be enabled in all models.</p>
+<div class="section" id="a-general-overview-of-the-lattice-boltzmann-method">
+<h2>A general overview of the Lattice-Boltzmann method<a class="headerlink" href="#a-general-overview-of-the-lattice-boltzmann-method" title="Permalink to this headline">¶</a></h2>
+<p>The Lattice-Boltzmann method is based on solving the following equation:</p>
+<div class="math">
+<p><img src="_images/math/da19f8d67b15c4229f709384de576772a558dbaf.png" alt="f_\alpha(\vec{x_i} + \vec{e_\alpha}, t + 1) - f_\alpha(\vec{x_i}, t) = \Omega_i"/></p>
+</div><p>which is a discrete version of the Boltzmann equation known from non-equilibrium
+statistical mechanics.  Here, <img class="math" src="_images/math/b2f35154c6674fdc437c6bd6351cc42a140f6152.png" alt="f_\alpha"/> are distributions of particles
+moving in the direction <img class="math" src="_images/math/38d251dcb9fac031e503f1bd2c3644945696e784.png" alt="\vec{e_\alpha}"/> (the available directions are specified
+by the chosen grid), <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/> is the current time step, <img class="math" src="_images/math/66edefac2140ba9e9b74e8d15fdc7bfc4a2c7cf2.png" alt="\vec{x_i}"/> is the
+position of the <img class="math" src="_images/math/34857b3ba74ce5cd8607f3ebd23e9015908ada71.png" alt="i"/>-th node in the grid, and <img class="math" src="_images/math/ec33fc41e19d1b5e03a213eec7824527a46955b9.png" alt="\Omega_i"/> is the collision
+operator.</p>
+<p>TODO: Add more info about the LBM.</p>
+</div>
+<div class="section" id="single-relaxation-time-bgk">
+<h2>Single relaxation time (BGK)<a class="headerlink" href="#single-relaxation-time-bgk" title="Permalink to this headline">¶</a></h2>
+<p>The BGK (Bhatnagar-Gross-Krook) approximation is based on the following form
+of the collision operator:</p>
+<div class="math">
+<p><img src="_images/math/d07b1db7c5302b21b5dca8fd3c8787d836df4d1f.png" alt="\Omega_i = -\frac{f(\vec{x_i}, t) - f^{(eq)}(\rho_i, \vec{v_i})}{\tau}"/></p>
+</div><p>where <img class="math" src="_images/math/1dc1c0119a604b91be9142370dc3159b6a9bbcb9.png" alt="\tau"/> is the relaxation time and <img class="math" src="_images/math/0f54ab1d4e111cd4769f602fe558a3a45575a67f.png" alt="f^{(eq)}"/> is the equilibrium
+distribution, defined as a function of macroscopic variables at a node.</p>
+<p>TODO: Add more info about the BGK approximation and its limitations.</p>
+</div>
+<div class="section" id="multiple-relaxation-times-mrt">
+<h2>Multiple relaxation times (MRT)<a class="headerlink" href="#multiple-relaxation-times-mrt" title="Permalink to this headline">¶</a></h2>
+<p>TODO: Add info about the MRT model.</p>
+</div>
+<div class="section" id="boundary-conditions">
+<h2>Boundary conditions<a class="headerlink" href="#boundary-conditions" title="Permalink to this headline">¶</a></h2>
+<p>Sailfish supports a number of local boundary conditions (non-local boundary conditions are
+currently not supported).  Each of the implemented boundary condition types can be available
+for a specific kind(s) of boundary conditions (no-slip (wall), velocity, pressure) and dimensions.</p>
+<div class="section" id="full-way-bounce-back">
+<h3>Full-way bounce-back<a class="headerlink" href="#full-way-bounce-back" title="Permalink to this headline">¶</a></h3>
+<p>This is the simplest type of boundary condition, available for no-slip and velocity nodes in
+all dimensions.  The boundary condition imposed by the full-way bounce-back algorithm takes
+effect in the middle between the boundary node (which is a dry node, i.e. it does not
+represent any fluid volume and does not undergo collisions) and the neighboring fluid node.
+The algorithm does not require any knowledge about the normal vector of the
+wall, so it can work in arbitrarily complex geometries.</p>
+<p>Full-way bounce-back works as follows:</p>
+<ul class="simple">
+<li>at time <img class="math" src="_images/math/e0d2bf360290fd61d1c1557e763f2622363b3d35.png" alt="t"/> distributions are propagated from the fluid to the bounce-back node</li>
+<li>at time <img class="math" src="_images/math/6698e583d6d03ec099c12e35add2e895252c49dd.png" alt="t+1"/> the distributions at the bounce-back node are reflected across the
+node center, and then streamed in the standard way</li>
+</ul>
+<p>This can be summarized as <img class="math" src="_images/math/a34bfa9df52908709cf60c90be82fc864c12d41c.png" alt="f_{i}^{pre}(x, t+2) = f_{opp(i)}^{post}(x, t)"/> since it
+takes two time steps for the reflected distributions to reach back the fluid nodes.</p>
+</div>
+<div class="section" id="half-way-bounce-back">
+<h3>Half-way bounce-back<a class="headerlink" href="#half-way-bounce-back" title="Permalink to this headline">¶</a></h3>
+<p>The half-way bounce-back boundary rule is based on a similar idea as the full-way bounce-back.
+Here however, the reflection takes only one time step and takes place exactly in
+the middle between the fluid node and what would be the first node outside of the simulation domain:
+<img class="math" src="_images/math/b42e3366c0958ec6d6830eb882dd1be1ed147831.png" alt="f_{i}^{pre}(x, t+1) = f_{opp(i)}^{post}(x, t)"/>.  The half-way bounce-back nodes are
+wet (i.e. true fluid nodes undergoing a standard collision process).</p>
+<p>For non-stationary flows the half-way bounce-back rule is more accurate than the full-way
+bounce-back.  For stationary flows there is no difference between them as the one step time
+lag in the full-way bounce-back rule does not impact the amount of momentum and mass
+transferred between the fluid and the boundary.</p>
+<p>The wall normal vector is necessary for the half-way bounce-back rule to work as only the
+unknown distributions (those for which there is no data streaming from other nodes)
+at the boundary nodes are replaced.</p>
+</div>
+<div class="section" id="equilibrium">
+<h3>Equilibrium<a class="headerlink" href="#equilibrium" title="Permalink to this headline">¶</a></h3>
+<p>This boundary condition algorithm works by imposing the BGK equilibrium distributions for
+a node.  It currently works for all types of boundary conditions in two dimensions only.</p>
+</div>
+<div class="section" id="zou-he">
+<h3>Zou-He<a class="headerlink" href="#zou-he" title="Permalink to this headline">¶</a></h3>
+<p>This algorithm is based upon the idea of the reflection of the off-equilibrium distributions.
+It currently works for all types of boundary conditions in two dimensions only.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Supported models, grids and boundary conditions</a><ul>
+<li><a class="reference internal" href="#a-general-overview-of-the-lattice-boltzmann-method">A general overview of the Lattice-Boltzmann method</a></li>
+<li><a class="reference internal" href="#single-relaxation-time-bgk">Single relaxation time (BGK)</a></li>
+<li><a class="reference internal" href="#multiple-relaxation-times-mrt">Multiple relaxation times (MRT)</a></li>
+<li><a class="reference internal" href="#boundary-conditions">Boundary conditions</a><ul>
+<li><a class="reference internal" href="#full-way-bounce-back">Full-way bounce-back</a></li>
+<li><a class="reference internal" href="#half-way-bounce-back">Half-way bounce-back</a></li>
+<li><a class="reference internal" href="#equilibrium">Equilibrium</a></li>
+<li><a class="reference internal" href="#zou-he">Zou-He</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="results.html"
+                        title="previous chapter">Simulation results processing</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="performance.html"
+                        title="next chapter">Performance Tuning</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/models.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="performance.html" title="Performance Tuning"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="results.html" title="Simulation results processing"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,222 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installation &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="next" title="Tutorial" href="tutorial.html" />
+    <link rel="prev" title="Motivation and Design Principles" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Motivation and Design Principles"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<p>Sailfish requires no installation and all sample simulations provided in the executable
+.py files can simply be started from a shell, provided the required packages are
+installed on the host system.  These are as follows (minimal required versions are shown):</p>
+<p>General requirements:</p>
+<ul class="simple">
+<li>numpy-1.3.0</li>
+<li>sympy-0.6.5</li>
+<li>mako-0.2.5</li>
+<li>a Python module for the computational backend (one or more of the following):<ul>
+<li>pycuda-0.92 (with the NVIDIA drivers and NVIDIA CUDA Toolkit)</li>
+<li>pypencl (with any OpenCL implementation)</li>
+</ul>
+</li>
+</ul>
+<p>Visualization (optional):</p>
+<ul class="simple">
+<li>pygame (for 2D/3D)</li>
+<li>mayavi (for 3D)</li>
+</ul>
+<p>Data output (optional):</p>
+<ul class="simple">
+<li>pytables-2.1.1 (HDF5 output)</li>
+<li>tvtk (VTK output)</li>
+</ul>
+<p>Tests:</p>
+<ul class="simple">
+<li>matplotlib</li>
+</ul>
+<div class="section" id="downloading-sailfish">
+<h2>Downloading Sailfish<a class="headerlink" href="#downloading-sailfish" title="Permalink to this headline">¶</a></h2>
+<p>We currently do not provide snapshot tarballs of the code, so you will need to get Sailfish
+directly from its git repository:</p>
+<div class="highlight-python"><pre>git clone git://gitorious.org/sailfish/sailfish.git</pre>
+</div>
+<p>Sailfish milestones and releases are appropriately tagged in the repository.  We try to
+make sure the code is always in a working state, but if you find the most recent checkout
+to be somehow broken, you might want to rewind to one of the tagged releases, e.g.:</p>
+<div class="highlight-python"><pre>git checkout v0.1-alpha1</pre>
+</div>
+</div>
+<div class="section" id="gentoo-installation-instructions">
+<h2>Gentoo installation instructions<a class="headerlink" href="#gentoo-installation-instructions" title="Permalink to this headline">¶</a></h2>
+<p>To install the required packages on a Gentoo system:</p>
+<div class="highlight-python"><pre>emerge numpy scipy pytables mayavi matplotlib mako pygame pycuda sympy dev-util/git</pre>
+</div>
+<p>You can also replace <tt class="docutils literal"><span class="pre">pycuda</span></tt> with <tt class="docutils literal"><span class="pre">pyopencl</span></tt> if you wish to use the OpenCL backend
+in Sailfish.</p>
+</div>
+<div class="section" id="ubuntu-installation-instructions">
+<h2>Ubuntu installation instructions<a class="headerlink" href="#ubuntu-installation-instructions" title="Permalink to this headline">¶</a></h2>
+<p>To install the required packages on an Ubuntu system:</p>
+<div class="highlight-python"><pre>apt-get install python-pygame mayavi2 python-matplotlib python-numpy python-tables python-scipy python-mako python-decorator
+apt-get install git-core python-setuptools libboost-dev
+git clone git://github.com/sympy/sympy
+git clone http://git.tiker.net/trees/pytools.git
+git clone http://git.tiker.net/trees/pycuda.git
+cd pytools
+python setup.py build
+python setup.py install
+cd ../sympy
+python setup.py build
+python setup.py install
+cd ../pycuda
+/configure.py --boost-python-libname=boost_python-mt-py26 --boost-thread-libname=boost_thread-mt --cuda-root=/usr/local/cuda
+python setup.py build
+python setup.py install</pre>
+</div>
+<p>There are currently no (recent enough) packages for SymPy and PyCUDA/PyOpenCL available for
+Ubuntu, so these have to be installed manually from a checked-out upstream code repository of
+these projects or a snapshot tarball.</p>
+<p>Please also note that the NumPy version provided in Ubuntu releases older than Karmic is not
+recent enough for Sailfish.</p>
+<p>The example listed above assumes that you want to use the CUDA backend.  Before installing pycuda,
+please make sure the NVIDIA CUDA Toolkit is installed in <tt class="docutils literal"><span class="pre">/usr/local/cuda</span></tt>.  You can get the
+necessary files at <a class="reference external" href="http://nvidia.com/cuda">http://nvidia.com/cuda</a>.</p>
+</div>
+<div class="section" id="mac-os-x-installation-instructions-mac-ports">
+<h2>Mac OS X installation instructions (Mac Ports)<a class="headerlink" href="#mac-os-x-installation-instructions-mac-ports" title="Permalink to this headline">¶</a></h2>
+<p>The easiest way to install all the Sailfish prerequisites on Mac OS X is to use the Mac Ports
+project and the PyOpenCL backend in Sailfish.  Follow the instructions at <a class="reference external" href="http://www.macports.org/">http://www.macports.org/</a>,
+and then run:</p>
+<div class="highlight-python"><pre>port install py26-sympy py26-pyopencl py26-game py26-mako py26-scipy</pre>
+</div>
+<p>To run the Sailfish examples, remember to use the correct Python interpreter (i.e. the one
+installed via Mac Ports).  For instance:</p>
+<blockquote>
+<div>python2.6 ./lbm_ldc.py &#8211;scr_depth=24</div></blockquote>
+<p>Note that for the pygame visualization, you may need to specify the &#8211;scr_depth option.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#downloading-sailfish">Downloading Sailfish</a></li>
+<li><a class="reference internal" href="#gentoo-installation-instructions">Gentoo installation instructions</a></li>
+<li><a class="reference internal" href="#ubuntu-installation-instructions">Ubuntu installation instructions</a></li>
+<li><a class="reference internal" href="#mac-os-x-installation-instructions-mac-ports">Mac OS X installation instructions (Mac Ports)</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Motivation and Design Principles</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="next chapter">Tutorial</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/installation.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Motivation and Design Principles"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

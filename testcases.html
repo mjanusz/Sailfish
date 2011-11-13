@@ -1,0 +1,226 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Examples and test cases &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="next" title="Regression tests results" href="regtest.html" />
+    <link rel="prev" title="Performance Tuning" href="performance.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="regtest.html" title="Regression tests results"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="performance.html" title="Performance Tuning"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="examples-and-test-cases">
+<h1>Examples and test cases<a class="headerlink" href="#examples-and-test-cases" title="Permalink to this headline">¶</a></h1>
+<p>Several sample simulations are included in the Sailfish code repository.  They serve to both
+illustrate the capabilities of the solver, as well as to test the correctness of the simulations
+by comparing their results to data from the literature or other CFD solvers.</p>
+<p>Most of the examples can be both run interactively, and as a part of a regression test.
+To run them interactively, the <tt class="docutils literal"><span class="pre">PYTHONPATH</span></tt> environment variable has to be set so that
+the <tt class="docutils literal"><span class="pre">sailfish</span></tt> module can be imported:</p>
+<div class="highlight-python"><pre>export PYTHONPATH=$PWD:$PYTHONPATH
+cd examples
+python lbm_ldc.py</pre>
+</div>
+<div class="section" id="d-examples">
+<h2>2D examples<a class="headerlink" href="#d-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="lid-driven-cavity">
+<h3>Lid-driven cavity<a class="headerlink" href="#lid-driven-cavity" title="Permalink to this headline">¶</a></h3>
+<p>The code for this example is located in <tt class="docutils literal"><span class="pre">examples/lbm_ldc.py</span></tt>.</p>
+<p>This is a standard computational fluid dynamics test problem.  The simulation domain is a
+square, with no-slip boundary conditions on three walls and a velocity boundary condition
+on the top, imposing horizontal velocity on the fluid.</p>
+<p>This example is currently not used as a regression test, but some reference data for the
+velocity profiles is collected in the <tt class="docutils literal"><span class="pre">regtest/ldc_golden</span></tt> directory in the Sailfish
+code repository.</p>
+<img alt="_images/ldc2d.png" src="_images/ldc2d.png" />
+<p>The image illustrates fluid velocity visualized in the <tt class="docutils literal"><span class="pre">rgb1</span></tt> mode.  The cyan circles are
+tracer particles.  The red lines depict the velocity field.</p>
+</div>
+<div class="section" id="poiseuille-flow">
+<h3>Poiseuille flow<a class="headerlink" href="#poiseuille-flow" title="Permalink to this headline">¶</a></h3>
+<p>The code for this example is located in <tt class="docutils literal"><span class="pre">examples/lbm_poiseuille.py</span></tt>.</p>
+<p>The fluid flows in a 2D pipe and a no-slip boundary condition is imposed at the pipe walls.  The flow
+is driven either by a global body force (<tt class="docutils literal"><span class="pre">--drive=force</span></tt>, default) or by a pressure gradient
+(<tt class="docutils literal"><span class="pre">--drive=pressure</span> <span class="pre">--stationary</span></tt>).  The <tt class="docutils literal"><span class="pre">--stationary</span></tt> command line argument can be used to
+start with the correct velocity profile if the force driving is used, or to start the
+simulation with the correct pressure profile if the pressure driving is used.</p>
+<p>This flow configuration is one of the few cases which can be solved analytically.  The point
+of the test is to make sure that the generated velocity profile is the same as the analytical
+solution (i.e. parabolic, with maximum velocity at the center of the channel).</p>
+<p>This example is also used as a part of the automated regression test in <tt class="docutils literal"><span class="pre">regtest/poiseuille.py</span></tt>,
+see <a class="reference internal" href="regtest-poiseuille2d.html"><em>Poiseuille flow (2D)</em></a> for results.</p>
+</div>
+<div class="section" id="flow-around-a-cylinder">
+<h3>Flow around a cylinder<a class="headerlink" href="#flow-around-a-cylinder" title="Permalink to this headline">¶</a></h3>
+<p>The code for this example is located in <tt class="docutils literal"><span class="pre">examples/lbm_cylinder.py</span></tt>.</p>
+<p>The classes in this example are derived from the ones used in the Poiseuille test, so the
+geometry and available command line options are exactly as described in the previous
+section.  A circular obstacle is added at the axis of the channel.  If the Reynolds number
+is in the correct range, a vortex shedding process occurs and vortices detaching periodically
+from the obstacle can be observed.</p>
+<p>This example is currently not used as an automated regression test.</p>
+<img alt="_images/cylinder2d_vorticity.png" src="_images/cylinder2d_vorticity.png" />
+<p>Von Kármán vortex street.  The image illustrates vorticity visualized in the <tt class="docutils literal"><span class="pre">2col</span></tt> mode.</p>
+</div>
+</div>
+<div class="section" id="id1">
+<h2>3D examples<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id2">
+<h3>Poiseuille flow<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>The code for this example is located in <tt class="docutils literal"><span class="pre">examples/lbm_poiseuille_3d.py</span></tt>.</p>
+<p>This example is like the 2D Poiseuille flow, but the pipe is now a proper cylinder with a
+circular cross section.  The flow can currently only be driven by a global body force.</p>
+<p>The flow in this geometry is, like its 2D counterpart, solvable analytically and the result
+is also a parabolic velocity profile.</p>
+<p>This example is used as a part of the automated regression test in <tt class="docutils literal"><span class="pre">regtest/poiseuille.py</span></tt>,
+see <a class="reference internal" href="regtest-poiseuille3d.html"><em>Poiseuille flow (3D)</em></a> for results.</p>
+</div>
+<div class="section" id="flow-around-a-sphere">
+<h3>Flow around a sphere<a class="headerlink" href="#flow-around-a-sphere" title="Permalink to this headline">¶</a></h3>
+<p>The code for this example is located in <tt class="docutils literal"><span class="pre">examples/lbm_sphere_3d.py</span></tt> and <tt class="docutils literal"><span class="pre">examples/lbm_sphere_force_3d.py</span></tt>.</p>
+<p>This example comes in two variants.  The first one is a direct counterpart of the flow around
+a cylinder example in 2D.  The classes are derived from the 3D Poiseuille example, the
+only difference being the spherical obstacle placed on the axis of the pipe.  The obstacle
+is formed by no-slip nodes.</p>
+<img alt="_images/sphere3d.png" src="_images/sphere3d.png" />
+<p>The image illustrates the velocity field of the fluid.  The red tubes depict streamlines.</p>
+<p>In the second and more useful variant, the flow is driven by velocity boundary conditions
+at the inlet and walls of the pipe.  This corresponds to the physical problem of a moving
+sphere in a pipe with stationary fluid, as seen from the frame of reference comoving with
+the sphere.</p>
+<p>This example is interesting, because it makes it possible to calculate the drag force
+exerted on the sphere by the fluid.  The value of the drag coefficient can then be compared
+with an approximate theoretical prediction or with experimental data.  In order to see the
+computed drag coefficient, run the example in the batch mode with verbose output (<tt class="docutils literal"><span class="pre">./lbm_sphere_force_3d.py</span> <span class="pre">--batch</span> <span class="pre">-v</span></tt>).
+You can also select different Reynolds numbers using the <tt class="docutils literal"><span class="pre">--re=N</span></tt> command line option.</p>
+<p>This example is also used as a part of the automated regression test in <tt class="docutils literal"><span class="pre">regtest/drag_coefficient.py</span></tt>,
+see <a class="reference internal" href="regtest-drag_coefficient.html"><em>Drag coefficient of a sphere (3D)</em></a> for results.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Examples and test cases</a><ul>
+<li><a class="reference internal" href="#d-examples">2D examples</a><ul>
+<li><a class="reference internal" href="#lid-driven-cavity">Lid-driven cavity</a></li>
+<li><a class="reference internal" href="#poiseuille-flow">Poiseuille flow</a></li>
+<li><a class="reference internal" href="#flow-around-a-cylinder">Flow around a cylinder</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id1">3D examples</a><ul>
+<li><a class="reference internal" href="#id2">Poiseuille flow</a></li>
+<li><a class="reference internal" href="#flow-around-a-sphere">Flow around a sphere</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="performance.html"
+                        title="previous chapter">Performance Tuning</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="regtest.html"
+                        title="next chapter">Regression tests results</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/testcases.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="regtest.html" title="Regression tests results"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="performance.html" title="Performance Tuning"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

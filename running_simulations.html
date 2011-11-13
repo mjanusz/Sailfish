@@ -1,0 +1,304 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Running simulations &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="up" title="Tutorial" href="tutorial.html" />
+    <link rel="next" title="Setting up simulations" href="simulations.html" />
+    <link rel="prev" title="Tutorial" href="tutorial.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="simulations.html" title="Setting up simulations"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="running-simulations">
+<h1>Running simulations<a class="headerlink" href="#running-simulations" title="Permalink to this headline">¶</a></h1>
+<p>In this section, we show how to create a simple Lattice-Boltzmann simulation using Sailfish.
+To keep things simple, we stick to two dimensions and use the lid-driven cavity
+example, which is one of the standard test cases in computational fluid dynamics.</p>
+<div class="section" id="the-program-outline">
+<h2>The program outline<a class="headerlink" href="#the-program-outline" title="Permalink to this headline">¶</a></h2>
+<p>In order to build a Sailfish simulation, we create a new Python script.
+In this script, we need to import the <a class="reference internal" href="api.html#module-lbm" title="lbm"><tt class="xref py py-mod docutils literal"><span class="pre">lbm</span></tt></a> and <a class="reference internal" href="api.html#module-geo" title="geo"><tt class="xref py py-mod docutils literal"><span class="pre">geo</span></tt></a> Sailfish
+modules:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">sailfish</span> <span class="kn">import</span> <span class="n">lbm</span><span class="p">,</span> <span class="n">geo</span>
+</pre></div>
+</div>
+<p>The <a class="reference internal" href="api.html#module-lbm" title="lbm"><tt class="xref py py-mod docutils literal"><span class="pre">lbm</span></tt></a> module contains a class which will drive our simulation, and the <a class="reference internal" href="api.html#module-geo" title="geo"><tt class="xref py py-mod docutils literal"><span class="pre">geo</span></tt></a>
+module contains classes used to describe the geometry of the simulation.  We will start
+by defining the main driver class for our example, and return to the issue of
+geometry later.</p>
+<p>Each Sailfish simulation is represented by a class derived from <tt class="xref py py-class docutils literal"><span class="pre">lbm.FluidLBMSim</span></tt>.
+In the simplest case, we don&#8217;t need to define any additional members of that class,
+and a simple definition along the lines of:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">LDCSim</span><span class="p">(</span><span class="n">lbm</span><span class="o">.</span><span class="n">FluidLBMSim</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>will do just fine.  The part of that class that is of primary interest to the end-user
+is its <tt class="docutils literal"><span class="pre">__init__</span></tt> method.  When the class is instantiated, it parses the command
+line arguments and stores the simulation settings in <tt class="docutils literal"><span class="pre">self.options</span></tt> (using the standard
+Python <a class="reference external" href="http://docs.python.org/library/optparse.html#module-optparse" title="(in Python v2.7)"><tt class="xref py py-mod docutils literal"><span class="pre">optparse</span></tt></a> module).  The <tt class="docutils literal"><span class="pre">__init__</span></tt> method takes a single argument by default
+&#8211; the class representing the simulation geometry.</p>
+<p>That class needs to be derived from either <a class="reference internal" href="api.html#geo.LBMGeo2D" title="geo.LBMGeo2D"><tt class="xref py py-class docutils literal"><span class="pre">geo.LBMGeo2D</span></tt></a> or <a class="reference internal" href="api.html#geo.LBMGeo3D" title="geo.LBMGeo3D"><tt class="xref py py-class docutils literal"><span class="pre">geo.LBMGeo3D</span></tt></a>, depending
+on the dimensionality of the problem at hand.  In our present case, we will
+use the former one.  The derived geometry class needs to define at least the following
+two methods: <tt class="docutils literal"><span class="pre">define_nodes</span></tt> and <tt class="docutils literal"><span class="pre">init_dist</span></tt>.</p>
+<p><tt class="docutils literal"><span class="pre">define_nodes</span></tt> is used to set the type of each node in the simulation domain.  The
+size of the simulation domain is already known when the geometry class is instantiated
+and can be accessed via its attributes <tt class="docutils literal"><span class="pre">lat_nx</span></tt> (size along the X axis), <tt class="docutils literal"><span class="pre">lat_ny</span></tt>
+(size along the Y axis) and <tt class="docutils literal"><span class="pre">lat_nz</span></tt> (size along the Z axis, for 2D simulations always
+equal to 1).</p>
+<p>By default, the whole domain is initialized as fluid nodes.  To define the geometry, we
+need to redefine some of the nodes using the <a class="reference internal" href="api.html#geo.LBMGeo.NODE_WALL" title="geo.LBMGeo.NODE_WALL"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_WALL</span></tt></a>, <a class="reference internal" href="api.html#geo.LBMGeo.NODE_VELOCITY" title="geo.LBMGeo.NODE_VELOCITY"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_VELOCITY</span></tt></a> or
+<a class="reference internal" href="api.html#geo.LBMGeo.NODE_PRESSURE" title="geo.LBMGeo.NODE_PRESSURE"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_PRESSURE</span></tt></a> class constants.  <a class="reference internal" href="api.html#geo.LBMGeo.NODE_WALL" title="geo.LBMGeo.NODE_WALL"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_WALL</span></tt></a> represents a no-slip condition at a
+stationary domain boundary.  <a class="reference internal" href="api.html#geo.LBMGeo.NODE_VELOCITY" title="geo.LBMGeo.NODE_VELOCITY"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_VELOCITY</span></tt></a> and <a class="reference internal" href="api.html#geo.LBMGeo.NODE_PRESSURE" title="geo.LBMGeo.NODE_PRESSURE"><tt class="xref py py-const docutils literal"><span class="pre">geo.LBMGeo.NODE_PRESSURE</span></tt></a> represent a
+boundary condition with specified velocity or pressure, respectively.  To redefine
+the nodes, we will use the <tt class="docutils literal"><span class="pre">set_geo(location,</span> <span class="pre">type,</span> <span class="pre">data)</span></tt> function.  Here, <tt class="docutils literal"><span class="pre">location</span></tt>
+is either a tuple representing the location of the node to update, or a NumPy Boolean
+array.  Using NumPy arrays is preferred, as they are much faster for larger domains.
+As for the remaining arguments of <tt class="docutils literal"><span class="pre">set_geo</span></tt>, <tt class="docutils literal"><span class="pre">type</span></tt> is one of the class constants
+discussed above, and <tt class="docutils literal"><span class="pre">data</span></tt> is an optional argument used to specify the imposed
+velocity or pressure.</p>
+<p>In the lid-driven cavity (LDC) geometry, we consider a rectangular box, open at the top
+where the fluid flows horizontally with some predefined velocity.  We therefore write
+our function as follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">LBMGeoLDC</span><span class="p">(</span><span class="n">geo</span><span class="o">.</span><span class="n">LBMGeo2D</span><span class="p">):</span>
+    <span class="n">max_v</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+    <span class="k">def</span> <span class="nf">define_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">hy</span><span class="p">,</span> <span class="n">hx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_nx</span><span class="p">]</span>
+        <span class="n">wall_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">hx</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">lat_nx</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">hx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">),</span> <span class="n">hy</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_geo</span><span class="p">(</span><span class="n">hy</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">NODE_VELOCITY</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_v</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_geo</span><span class="p">(</span><span class="n">wall_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">NODE_WALL</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now that we have the geometry out of the way, we can deal with the initial conditions.
+This is done in the <tt class="docutils literal"><span class="pre">init_dist(dist)</span></tt> function, which is responsible for setting the initial
+particle distributions in all nodes in the simulation domain.  The function takes a single
+<tt class="docutils literal"><span class="pre">dist</span></tt> argument, which is a NumPy array containing the distributions.  We normally won&#8217;t
+be accessing that array directly anyway, so the exact details of how the distributions are
+stored is irrelevant.</p>
+<p>There are two ways to set their initial value.  The first one is based on the
+<tt class="docutils literal"><span class="pre">velocity_to_dist(location,</span> <span class="pre">velocity,</span> <span class="pre">dist)</span></tt> function, which sets the node at <tt class="docutils literal"><span class="pre">location</span></tt>
+to have the equilibrium distribution corresponding to <tt class="docutils literal"><span class="pre">velocity</span></tt> and a density of 1.0.
+The alternative way of specifying initial conditions is to provide the values of macroscopic
+variables (density, velocity) everywhere in the simulation domain, and let the GPU calculate
+the equilibrium distributions.  The second method is preferred, as it is faster and requires
+less memory on the host.</p>
+<p>In our LDC geometry, we set the velocity of the fluid everywhere to be 0 (this is the default value
+so we do not have to specify this explicitly), except for the first row at the top, where we set
+the fluid to have to a <tt class="docutils literal"><span class="pre">max_v</span></tt> velocity in the horizontal direction:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">init_dist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dist</span><span class="p">):</span>
+    <span class="n">hy</span><span class="p">,</span> <span class="n">hx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_nx</span><span class="p">]</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">ic_fields</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">rho</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">vx</span><span class="p">[</span><span class="n">hy</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_v</span>
+</pre></div>
+</div>
+<p>At this point, we are almost good to go.  The only remaining thing to do is to
+instantiate the <tt class="docutils literal"><span class="pre">LDCSim</span></tt> class and use its <tt class="docutils literal"><span class="pre">run</span></tt> method to actually start the
+simulation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">sim</span> <span class="o">=</span> <span class="n">LDCSim</span><span class="p">(</span><span class="n">LBMGeoLDC</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="how-it-works-behind-the-scenes">
+<h2>How it works behind the scenes<a class="headerlink" href="#how-it-works-behind-the-scenes" title="Permalink to this headline">¶</a></h2>
+<p>When the <a class="reference internal" href="api.html#lbm.LBMSim.run" title="lbm.LBMSim.run"><tt class="xref py py-func docutils literal"><span class="pre">lbm.LBMSim.run()</span></tt></a> method is called, Sailfish instantiates the geometry class (this
+process can take a few seconds for 3D simulations with complex <tt class="docutils literal"><span class="pre">init_dist()</span></tt> and
+<tt class="docutils literal"><span class="pre">define_nodes()</span></tt> functions.  It then uses the Mako template engine and the information
+from the options and the geometry class to generate the code for the compute
+unit (e.g. a GPU).  The code can be in either CUDA C or OpenCL and it is
+automatically optimized (e.g. code for models and boundary conditions other than the
+selected ones is automatically removed).  The generated code is then compiled on the
+fly by the <tt class="xref py py-mod docutils literal"><span class="pre">pyopencl</span></tt> or <tt class="xref py py-mod docutils literal"><span class="pre">pycuda</span></tt> modules into a binary which is executed on the GPU.</p>
+<p>The template for the compute unit source is contained in the <tt class="docutils literal"><span class="pre">.mako</span></tt> files in the <tt class="docutils literal"><span class="pre">templates</span></tt>
+directory of the <a class="reference internal" href="index.html#module-sailfish" title="sailfish"><tt class="xref py py-mod docutils literal"><span class="pre">sailfish</span></tt></a> module.  It is written in a mix of Python, Mako and CUDA C.
+Parts of the code that end up in GPU functions are also generated by the <a class="reference internal" href="api.html#module-sym" title="sym"><tt class="xref py py-mod docutils literal"><span class="pre">sym</span></tt></a> module.
+This module contains functions which return SymPy expressions, which are then converted to C code.
+The use of <tt class="xref py py-mod docutils literal"><span class="pre">sympy</span></tt> makes it possible to write large parts of the code in a grid-independent form, which
+is then automatically expanded when the GPU code is generated.</p>
+<p>This process, although seemingly quite complex, has several advantages:</p>
+<ul class="simple">
+<li>The generated code can be automatically optimized.</li>
+<li>The code for multiple targets can be generated automatically (currently, OpenCL and
+CUDA are supported).</li>
+<li>By keeping the source code in a grid-independent form, the code becomes easier to
+read and can work automatically with new grids and models.</li>
+</ul>
+</div>
+<div class="section" id="using-the-command-line-arguments">
+<h2>Using the command-line arguments<a class="headerlink" href="#using-the-command-line-arguments" title="Permalink to this headline">¶</a></h2>
+<p>The base class for Sailfish simulations (<a class="reference internal" href="api.html#lbm.LBMSim" title="lbm.LBMSim"><tt class="xref py py-class docutils literal"><span class="pre">lbm.LBMSim</span></tt></a>) defines a large number of command line
+options which can be used to control the simulation.  To get a full list of currently supported
+options, run any Sailfish simulation with the <tt class="docutils literal"><span class="pre">--help</span></tt> command line option.  Some of the
+basic settings you might want to play with when starting to work with Sailfish are as follows:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">--lat_nx=N</span></tt>, <tt class="docutils literal"><span class="pre">--lat_ny=N</span></tt>, <tt class="docutils literal"><span class="pre">--lat_nz=N</span></tt>: set lattice dimensions (width, height and depth, respectively)</li>
+<li><tt class="docutils literal"><span class="pre">--precision=X</span></tt>: set the precision of floating-point numbers used in the simulation (<tt class="docutils literal"><span class="pre">single</span></tt> or <tt class="docutils literal"><span class="pre">double</span></tt>).
+Note that double precision calculations will currently be significantly slower than their single precision
+counterparts, and might not be supported at all on some older devices.</li>
+<li><tt class="docutils literal"><span class="pre">--backend=X</span></tt>: select the backend to be used to run the simulation.  Supported values are
+<tt class="docutils literal"><span class="pre">cuda</span></tt> and <tt class="docutils literal"><span class="pre">opencl</span></tt>.  Their availability will depend on the presence of required Python
+modules in the host system (<tt class="xref py py-mod docutils literal"><span class="pre">pyopencl</span></tt>, <tt class="xref py py-mod docutils literal"><span class="pre">pycuda</span></tt>).</li>
+<li><tt class="docutils literal"><span class="pre">--save_src=FILE</span></tt>: save the generated GPU code to <tt class="docutils literal"><span class="pre">FILE</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">--use_src=FILE</span></tt>: use the GPU code from <tt class="docutils literal"><span class="pre">FILE</span></tt> instead of the one generated by Sailfish
+(useful for testing minor changes in the kernel code).</li>
+<li><tt class="docutils literal"><span class="pre">--every=N</span></tt>: update the display every <tt class="docutils literal"><span class="pre">N</span></tt> iterations.</li>
+<li><tt class="docutils literal"><span class="pre">--benchmark</span></tt>: run the simulation in benchmark mode, printing information about its
+performance to the standard output.</li>
+<li><tt class="docutils literal"><span class="pre">--batch</span></tt>, <tt class="docutils literal"><span class="pre">--nobatch</span></tt>: force or disable batch mode, respectively.  In batch mode, all
+visualization modules are disabled and hooks defined for the simulation are run at
+specified iterations.  Batch mode requires specifying the <tt class="docutils literal"><span class="pre">max_iters</span></tt> option.</li>
+<li><tt class="docutils literal"><span class="pre">--max_iters=N</span></tt>: the number of iterations the simulation is to be run for in batch mode.</li>
+</ul>
+<p>The <tt class="docutils literal"><span class="pre">--save_src</span></tt> option is particularly useful if you want to learn the basic structure of the
+GPU code.  The Mako template files, which contain the actual code, can be difficult to
+understand at first, as they mix three languages: Python, the Mako template language and
+CUDA C.  To avoid this complexity, you might want to save the generated compute device code
+and inspect it in a text editor.  The generated code will be automatically formatted to be
+readable unless the <tt class="docutils literal"><span class="pre">--noformat_src</span></tt> option is specified.  The command used to format the
+code can be redefined by overriding the <a class="reference internal" href="api.html#lbm.LBMSim.format_cmd" title="lbm.LBMSim.format_cmd"><tt class="xref py py-attr docutils literal"><span class="pre">lbm.LBMSim.format_cmd</span></tt></a> value.  The default one
+requires the <tt class="docutils literal"><span class="pre">indent</span></tt> utility and is set so that the generated code roughly follows the
+formatting style of the Linux kernel (with longer lines, which can be useful for complex expressions).</p>
+</div>
+<div class="section" id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="my-simulation-works-fine-in-single-precision-but-breaks-in-double-precision">
+<h3>My simulation works fine in single precision, but breaks in double precision.<a class="headerlink" href="#my-simulation-works-fine-in-single-precision-but-breaks-in-double-precision" title="Permalink to this headline">¶</a></h3>
+<p>If your simulation runs in double precision, but generates clearly unphysical results that
+do not appear when it&#8217;s run in single precision, it&#8217;s possible that the CUDA optimizing compiler
+is generating broken code.  To check whether this is the case, you need to disable all optimizations
+by running your simulation with the <tt class="docutils literal"><span class="pre">--cuda-nvcc-opts=&quot;-Xopencc</span> <span class="pre">-O0&quot;</span></tt> command line option.
+Note that this will significantly decrease the performance of your simulation.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Running simulations</a><ul>
+<li><a class="reference internal" href="#the-program-outline">The program outline</a></li>
+<li><a class="reference internal" href="#how-it-works-behind-the-scenes">How it works behind the scenes</a></li>
+<li><a class="reference internal" href="#using-the-command-line-arguments">Using the command-line arguments</a></li>
+<li><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li><a class="reference internal" href="#my-simulation-works-fine-in-single-precision-but-breaks-in-double-precision">My simulation works fine in single precision, but breaks in double precision.</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="previous chapter">Tutorial</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="simulations.html"
+                        title="next chapter">Setting up simulations</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/running_simulations.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="simulations.html" title="Setting up simulations"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,283 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Simulation results processing &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="up" title="Tutorial" href="tutorial.html" />
+    <link rel="next" title="Supported models, grids and boundary conditions" href="models.html" />
+    <link rel="prev" title="Setting up simulations" href="simulations.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="models.html" title="Supported models, grids and boundary conditions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="simulations.html" title="Setting up simulations"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="simulation-results-processing">
+<h1>Simulation results processing<a class="headerlink" href="#simulation-results-processing" title="Permalink to this headline">¶</a></h1>
+<p>Results form Sailfish simulations can saved to disk for processing in external
+applications or visualized in real-time.  These options are not exclusive, so
+concurrent visualization and data saving is fully supported.</p>
+<div class="section" id="data-output">
+<h2>Data output<a class="headerlink" href="#data-output" title="Permalink to this headline">¶</a></h2>
+<p>Sailfish supports a number of output data formats.  The data format is selected
+using the <tt class="docutils literal"><span class="pre">--output_format</span></tt> command line option, which can take one of the
+values listed in the &#8220;Parameter name&#8221; column below:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="26%" />
+<col width="28%" />
+<col width="46%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Data format</th>
+<th class="head">Parameter name</th>
+<th class="head">Required Python modules</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>HDF5 (flat)</td>
+<td>h5flat</td>
+<td>pytables</td>
+</tr>
+<tr class="row-odd"><td>HDF5 (nested)</td>
+<td>h5nested</td>
+<td>pytables</td>
+</tr>
+<tr class="row-even"><td>VTK</td>
+<td>vtk</td>
+<td>tvtk</td>
+</tr>
+<tr class="row-odd"><td>numpy archive</td>
+<td>npy</td>
+<td>numpy</td>
+</tr>
+<tr class="row-even"><td>MatLab array</td>
+<td>mat</td>
+<td>scipy</td>
+</tr>
+</tbody>
+</table>
+<p>In all modes, the name of the output file is specified using the <tt class="docutils literal"><span class="pre">--output</span></tt> command
+line option, though the exact meaning of this is different for different file formats.</p>
+<p>In the <tt class="docutils literal"><span class="pre">h5nested</span></tt> mode, a single HDF5 file is created.  The file contains a single
+group called <tt class="docutils literal"><span class="pre">results</span></tt>.  The group contains a single table and each record in this
+table corresponds to the state of the simulation at a specific iteration.  The table
+contains columns for velocity components (<tt class="docutils literal"><span class="pre">vx</span></tt>, <tt class="docutils literal"><span class="pre">vy</span></tt> and <tt class="docutils literal"><span class="pre">vz</span></tt>), density (<tt class="docutils literal"><span class="pre">rho</span></tt>),
+the current iteration (<tt class="docutils literal"><span class="pre">iter</span></tt>), and possibly also other scalar and vector fields
+used in the simulation.</p>
+<p>In the <tt class="docutils literal"><span class="pre">h5flat</span></tt> mode, also a single HDF5 file is created.  The file contains
+multiple groups, called <tt class="docutils literal"><span class="pre">iterXXX</span></tt> where <tt class="docutils literal"><span class="pre">XXX</span></tt> is the iteration number.  Each
+of the groups contains a number of arrays with the scalar and vector field data.</p>
+<p>In the <tt class="docutils literal"><span class="pre">vtk</span></tt>, <tt class="docutils literal"><span class="pre">npy</span></tt> and <tt class="docutils literal"><span class="pre">mat</span></tt> modes, multiple files are generated, each containing the state
+of the simulation at a specific iteration.  The file names are generated by appending
+the iteration number to the base name provided via the <tt class="docutils literal"><span class="pre">--output</span></tt> option, e.g. if
+<tt class="docutils literal"><span class="pre">--output=poiseuille</span></tt> is used, <tt class="docutils literal"><span class="pre">poiseuille00400.xml</span></tt> will contain data for the
+400th iteration.</p>
+</div>
+<div class="section" id="data-visualization">
+<h2>Data visualization<a class="headerlink" href="#data-visualization" title="Permalink to this headline">¶</a></h2>
+<p>Sailfish supports on-line data visualization regardless of whether any results are
+written out to files on disk.  If you don&#8217;t want any visualization, start your simulations
+with the <tt class="docutils literal"><span class="pre">--batch</span></tt> option.  The visualization modules for 2D and 3D are
+different, and thus will be discussed separately.</p>
+<div class="section" id="visualization-of-2d-data">
+<h3>Visualization of 2D data<a class="headerlink" href="#visualization-of-2d-data" title="Permalink to this headline">¶</a></h3>
+<p>2D simulations can be monitored using an interactive pygame-based interface.
+The interface supports a number of color maps, which can be changed interactively (see below).</p>
+<p>The initial size of the visualization window can be controlled with command line parameters.
+One can specify its size explicitly using the <tt class="docutils literal"><span class="pre">--scr_w</span></tt> and <tt class="docutils literal"><span class="pre">--scr_h</span></tt> options
+to set the width and height, respectively.  Alternatively, the <tt class="docutils literal"><span class="pre">--scr_scale</span></tt> option can
+be used to make the window dimensions directly proportional to those of the lattice, e.g.
+if <tt class="docutils literal"><span class="pre">--scr_scale=3</span></tt> is used the window will be 3 times larger than the lattice and each
+lattice site will be visualized as a 3x3 square.</p>
+<p>Interaction with the simulation is provided via mouse: left key presses place walls
+(i.e. nodes with the no-slip boundary condition, with no intrinsic velocity) in the
+simulation domain, and right key presses remove them.  Moving the mouse with the <tt class="kbd docutils literal"><span class="pre">Ctrl</span></tt>
+key pressed, will impart velocity to the fluid under the mouse cursor.  The <tt class="docutils literal"><span class="pre">--imparted_velocity</span></tt>
+and <tt class="docutils literal"><span class="pre">--imparted_diameter</span></tt> options can be used to control this process.</p>
+<p>The visualization module can be controlled from the keyboard, and the following
+keys are defined:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="5%" />
+<col width="95%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">-</span></tt></td>
+<td>previous scalar field</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">=</span></tt></td>
+<td>next scalar field</td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">[</span></tt></td>
+<td>previous color map</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">]</span></tt></td>
+<td>next color map</td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">i</span></tt></td>
+<td>toggle visibility of text info about the state of the simulation (MLUPS, iteration etc.)</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">v</span></tt></td>
+<td>toggle visualization of the velocity vector field</td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">t</span></tt></td>
+<td>toggle visualization of the fluid tracer particles</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">c</span></tt></td>
+<td>toggle convolution of the visualization with a Gaussian kernel (this has a smoothing effect)</td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">e</span></tt></td>
+<td>apply the emboss filter to the visualization (useful to monitor sound waves)</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">r</span></tt></td>
+<td>reset the simulation geometry (this clears any obstacles added interactively)</td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">q</span></tt></td>
+<td>quit the simulation</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">s</span></tt></td>
+<td>take a screenshot</td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">,</span></tt></td>
+<td>decrease the max value used in the color map</td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">.</span></tt></td>
+<td>increase the max value used in the color map</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="visualization-of-3d-data">
+<h3>Visualization of 3D data<a class="headerlink" href="#visualization-of-3d-data" title="Permalink to this headline">¶</a></h3>
+<p>3D data visualization is provided via the mayavi package.  This visualization is
+not interactive at this time.</p>
+<p>3D data can also be visualized in <em>cutplane</em> mode, using the pygame-based interface.
+To select this mode, use the <tt class="docutils literal"><span class="pre">--vis=cutplane</span></tt> command line option.  Only cutplanes
+perpendicular to a domain axis are currently supported.  The <tt class="docutils literal"><span class="pre">x</span></tt>, <tt class="docutils literal"><span class="pre">y</span></tt> and <tt class="docutils literal"><span class="pre">z</span></tt> keys
+can be used to select the cutplane.  The <tt class="docutils literal"><span class="pre">;</span></tt> and <tt class="docutils literal"><span class="pre">'</span></tt> keys can be used to move
+the cutplane along the selected axis.  Tracer particles are not supported in the cutplane mode.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Simulation results processing</a><ul>
+<li><a class="reference internal" href="#data-output">Data output</a></li>
+<li><a class="reference internal" href="#data-visualization">Data visualization</a><ul>
+<li><a class="reference internal" href="#visualization-of-2d-data">Visualization of 2D data</a></li>
+<li><a class="reference internal" href="#visualization-of-3d-data">Visualization of 3D data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="simulations.html"
+                        title="previous chapter">Setting up simulations</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="models.html"
+                        title="next chapter">Supported models, grids and boundary conditions</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/results.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="models.html" title="Supported models, grids and boundary conditions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="simulations.html" title="Setting up simulations"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+          <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

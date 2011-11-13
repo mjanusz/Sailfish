@@ -1,0 +1,299 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sailfish Reference Manual &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="#" />
+    <link rel="next" title="Motivation and Design Principles" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Motivation and Design Principles"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sailfish-reference-manual">
+<h1>Sailfish Reference Manual<a class="headerlink" href="#sailfish-reference-manual" title="Permalink to this headline">¶</a></h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Release:</th><td class="field-body">0.2</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Date:</th><td class="field-body">November 13, 2011</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="module-sailfish"></span><p>Sailfish is a free computational fluid dynamics solver based on the Lattice Boltzmann
+method and optimized for modern multi-core systems, especially GPUs (Graphics Processing Units).</p>
+<p>To illustrate how easy it is to create simulations using the Sailfish package,
+here is a simple example code to simulate fluid flow in a lid-driven cavity:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sailfish</span> <span class="kn">import</span> <span class="n">geo</span><span class="p">,</span> <span class="n">lbm</span>
+
+<span class="k">class</span> <span class="nc">LBMGeoLDC</span><span class="p">(</span><span class="n">geo</span><span class="o">.</span><span class="n">LBMGeo2D</span><span class="p">):</span>
+    <span class="n">max_v</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+    <span class="k">def</span> <span class="nf">define_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">hy</span><span class="p">,</span> <span class="n">hx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_nx</span><span class="p">]</span>
+        <span class="n">wall_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">hx</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">lat_nx</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">hx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">),</span> <span class="n">hy</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_geo</span><span class="p">(</span><span class="n">hy</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">NODE_VELOCITY</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_v</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_geo</span><span class="p">(</span><span class="n">wall_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">NODE_WALL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">init_dist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dist</span><span class="p">):</span>
+        <span class="n">hy</span><span class="p">,</span> <span class="n">hx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lat_nx</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">ic_fields</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">rho</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim</span><span class="o">.</span><span class="n">vx</span><span class="p">[</span><span class="n">hy</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">lat_ny</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_v</span>
+
+<span class="k">class</span> <span class="nc">LDCSim</span><span class="p">(</span><span class="n">lbm</span><span class="o">.</span><span class="n">FluidLBMSim</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">LDCSim</span><span class="p">(</span><span class="n">LBMGeoLDC</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Want to see Sailfish in action?  Check out our <a class="reference external" href="http://www.youtube.com/watch?v=kx4-VjaJ2eI&amp;feature=PlayList&amp;p=96C9241314F1A898&amp;index=0&amp;playnext=1">videos on YouTube</a>,
+or better yet, <a class="reference external" href="http://gitorious.org/sailfish">get the code</a> and see for yourself by running the provided examples.</p>
+<object type="application/x-shockwave-flash"
+        width="425"
+        height="344"
+        class="youtube-embed"
+        data="http://www.youtube.com/v/kx4-VjaJ2eI">
+    <param name="movie" value="http://www.youtube.com/v/kx4-VjaJ2eI"></param>
+    <param name="wmode" value="transparent"></param>
+</object>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Motivation and Design Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#downloading-sailfish">Downloading Sailfish</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#gentoo-installation-instructions">Gentoo installation instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#ubuntu-installation-instructions">Ubuntu installation instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#mac-os-x-installation-instructions-mac-ports">Mac OS X installation instructions (Mac Ports)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="running_simulations.html">Running simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="running_simulations.html#the-program-outline">The program outline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="running_simulations.html#how-it-works-behind-the-scenes">How it works behind the scenes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="running_simulations.html#using-the-command-line-arguments">Using the command-line arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="running_simulations.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="simulations.html">Setting up simulations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="simulations.html#mapping-physical-quantities-to-simulation-parameters">Mapping physical quantities to simulation parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="results.html">Simulation results processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="results.html#data-output">Data output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="results.html#data-visualization">Data visualization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Supported models, grids and boundary conditions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#a-general-overview-of-the-lattice-boltzmann-method">A general overview of the Lattice-Boltzmann method</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#single-relaxation-time-bgk">Single relaxation time (BGK)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#multiple-relaxation-times-mrt">Multiple relaxation times (MRT)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#boundary-conditions">Boundary conditions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="models.html#full-way-bounce-back">Full-way bounce-back</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#half-way-bounce-back">Half-way bounce-back</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#equilibrium">Equilibrium</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models.html#zou-he">Zou-He</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance Tuning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#general-tuning-strategies">General tuning strategies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#adjusting-the-block-size">Adjusting the block size</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#limiting-register-usage">Limiting register usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#using-fast-math-functions">Using fast math functions</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#nvidia-fermi-cards">NVIDIA Fermi cards</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#block-size">Block size</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#performance-comparison-for-different-devices">Performance comparison for different devices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#single-precision">Single precision</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#double-precision">Double precision</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#performance-impact-of-the-block-size-single-precision">Performance impact of the block size (single precision)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#geforce-gtx-285">GeForce GTX 285</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#tesla-c1060">Tesla C1060</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#tesla-c2050">Tesla C2050</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#performance-impact-of-the-block-size-double-precision">Performance impact of the block size (double precision)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#id1">GeForce GTX 285</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#id2">Tesla C1060</a></li>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#id3">Tesla C2050</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testcases.html">Examples and test cases</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="testcases.html#d-examples">2D examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="testcases.html#lid-driven-cavity">Lid-driven cavity</a></li>
+<li class="toctree-l3"><a class="reference internal" href="testcases.html#poiseuille-flow">Poiseuille flow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="testcases.html#flow-around-a-cylinder">Flow around a cylinder</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="testcases.html#id1">3D examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="testcases.html#id2">Poiseuille flow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="testcases.html#flow-around-a-sphere">Flow around a sphere</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="regtest.html">Regression tests results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="regtest-poiseuille2d.html">Poiseuille flow (2D)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="regtest-poiseuille2d.html#body-force-driving">Body force driving</a></li>
+<li class="toctree-l3"><a class="reference internal" href="regtest-poiseuille2d.html#pressure-driving">Pressure driving</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="regtest-poiseuille3d.html">Poiseuille flow (3D)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="regtest-poiseuille3d.html#body-force-driving">Body force driving</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="regtest-drag_coefficient.html">Drag coefficient of a sphere (3D)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Sailfish API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-lbm">Simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-geo">Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-sym">Symbolic computation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="about.html#development-team">Development team</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#how-to-help">How to help?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#license">License</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Sailfish Reference Manual</a><ul>
+<li><a class="reference internal" href="#contents">Contents</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="next chapter">Motivation and Design Principles</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Motivation and Design Principles"
+             >next</a> |</li>
+        <li><a href="#">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

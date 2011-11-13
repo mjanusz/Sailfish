@@ -1,0 +1,914 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sailfish API &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.2-alpha1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="next" title="About" href="about.html" />
+    <link rel="prev" title="Drag coefficient of a sphere (3D)" href="regtest-drag_coefficient.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="about.html" title="About"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="regtest-drag_coefficient.html" title="Drag coefficient of a sphere (3D)"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sailfish-api">
+<h1>Sailfish API<a class="headerlink" href="#sailfish-api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-lbm">
+<span id="simulation"></span><h2>Simulation<a class="headerlink" href="#module-lbm" title="Permalink to this headline">¶</a></h2>
+<p>Core Lattice Boltzmann simulation classes for Sailfish.</p>
+<dl class="class">
+<dt id="lbm.Hook">
+<em class="property">class </em><tt class="descclassname">lbm.</tt><tt class="descname">Hook</tt><big>(</big><em>function</em>, <em>need_data=True</em><big>)</big><a class="headerlink" href="#lbm.Hook" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class wrapping hook called after simulation iteration.
+:param function: function to execute when hook is called
+:param need_data: whether hook needs transmitting data from device to host</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="lbm.LBMSim">
+<em class="property">class </em><tt class="descclassname">lbm.</tt><tt class="descname">LBMSim</tt><big>(</big><em>geo_class</em>, <em>options=</em><span class="optional">[</span><span class="optional">]</span>, <em>args=None</em>, <em>defaults=None</em><big>)</big><a class="headerlink" href="#lbm.LBMSim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for LBM simulations. Descendant classes should be declared for specific simulations.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>geo_class</strong> &#8211; geometry class to use for the simulation</li>
+<li><strong>options</strong> &#8211; iterable of <tt class="docutils literal"><span class="pre">optparse.Option</span></tt> instances representing additional
+options accepted by this simulation</li>
+<li><strong>args</strong> &#8211; command line arguments</li>
+<li><strong>defaults</strong> &#8211; a dictionary specifying the default values for any simulation options.
+These take precedence over the default values specified in <tt class="docutils literal"><span class="pre">optparse.Option</span></tt> objects.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="lbm.LBMSim.add_body_force">
+<tt class="descname">add_body_force</tt><big>(</big><em>force</em>, <em>grid=0</em>, <em>accel=True</em><big>)</big><a class="headerlink" href="#lbm.LBMSim.add_body_force" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a constant global force field acting on the fluid.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>force</strong> &#8211; n-vector of the force values</li>
+<li><strong>grid</strong> &#8211; grid number on which this force is acting</li>
+<li><strong>accel</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, the added field is an acceleration field, otherwise
+it is an actual force field</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.add_iter_hook">
+<tt class="descname">add_iter_hook</tt><big>(</big><em>i</em>, <em>func</em>, <em>every=False</em>, <em>need_data=True</em><big>)</big><a class="headerlink" href="#lbm.LBMSim.add_iter_hook" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a hook that will be executed during the simulation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>i</strong> &#8211; number of the time step after which the hook is to be run</li>
+<li><strong>func</strong> &#8211; callable representing the hook</li>
+<li><strong>every</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, the hook will be executed every <em>i</em> steps</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.clear_hooks">
+<tt class="descname">clear_hooks</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.LBMSim.clear_hooks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove all hooks.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.get_reduction">
+<tt class="descname">get_reduction</tt><big>(</big><em>reduce_expr</em>, <em>map_expr</em>, <em>neutral</em>, <em>*args</em><big>)</big><a class="headerlink" href="#lbm.LBMSim.get_reduction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate and return reduction kernel; see PyCUDA and PyOpenCL
+documentation of ReductionKernel for detailed description.
+Function expects buffers that are in the host address space,
+e.g. sim.rho, sim.velocity, etc.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>reduce_expr</strong> &#8211; expression used to reduce two values into one,
+must use a and b as values names, e.g. &#8216;a+b&#8217;</li>
+<li><strong>map_expr</strong> &#8211; expression used to map value from input array,
+arrays are named x0, x1, etc., e.g. &#8216;x0[i]*x1[i]</li>
+<li><strong>neutral</strong> &#8211; neutral value in reduce_expr, e.g. &#8216;0&#8217;</li>
+<li><strong>args</strong> &#8211; buffers on which to calculate reduction, e.g. sim.rho</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.hostsync_density">
+<tt class="descname">hostsync_density</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.LBMSim.hostsync_density" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the current density field from the compute unit to the host.</p>
+<p>The density field is then available in <tt class="xref py py-attr docutils literal"><span class="pre">rho</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.hostsync_dist">
+<tt class="descname">hostsync_dist</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.LBMSim.hostsync_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the current distributions from the compute unit to the host.</p>
+<p>The distributions are then available in <a class="reference internal" href="#lbm.LBMSim.dist" title="lbm.LBMSim.dist"><tt class="xref py py-attr docutils literal"><span class="pre">dist</span></tt></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.hostsync_tracers">
+<tt class="descname">hostsync_tracers</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.LBMSim.hostsync_tracers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the tracer positions from the compute unit to the host.</p>
+<p>The distributions are then available in <tt class="xref py py-attr docutils literal"><span class="pre">tracer_x</span></tt>, <tt class="xref py py-attr docutils literal"><span class="pre">tracer_y</span></tt> and <tt class="xref py py-attr docutils literal"><span class="pre">tracer_z</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.hostsync_velocity">
+<tt class="descname">hostsync_velocity</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.LBMSim.hostsync_velocity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the current velocity field from the compute unit to the host.</p>
+<p>The velocity field is then availble in <tt class="xref py py-attr docutils literal"><span class="pre">vx</span></tt>, <tt class="xref py py-attr docutils literal"><span class="pre">vy</span></tt> and <tt class="xref py py-attr docutils literal"><span class="pre">vz</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.make_field">
+<tt class="descname">make_field</tt><big>(</big><em>name=None</em>, <em>output=False</em><big>)</big><a class="headerlink" href="#lbm.LBMSim.make_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new numpy array representing a scalar field used in the simulation.</p>
+<p>This method automatically takes care of the field type, shape and strides.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.run">
+<tt class="descname">run</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.LBMSim.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the simulation.</p>
+<p>This automatically handles any options related to visualization and the benchmark and batch modes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lbm.LBMSim.sim_step">
+<tt class="descname">sim_step</tt><big>(</big><em>tracers=False</em>, <em>get_data=False</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#lbm.LBMSim.sim_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a single step of the simulation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>tracers</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, the position of tracer particles will be updated</li>
+<li><strong>get_data</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, macroscopic variables will be copied from the compute unit
+and made available as properties of this class</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.dist">
+<tt class="descname">dist</tt><a class="headerlink" href="#lbm.LBMSim.dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>The current distributions array.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">use <a class="reference internal" href="#lbm.LBMSim.hostsync_dist" title="lbm.LBMSim.hostsync_dist"><tt class="xref py py-meth docutils literal"><span class="pre">hostsync_dist()</span></tt></a> before accessing this property</p>
+</div>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.dt">
+<tt class="descname">dt</tt><a class="headerlink" href="#lbm.LBMSim.dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Size of the time step in simulation units.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.filename">
+<tt class="descname">filename</tt><em class="property"> = 'lbm_sim'</em><a class="headerlink" href="#lbm.LBMSim.filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>The filename base for screenshots.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.format_cmd">
+<tt class="descname">format_cmd</tt><em class="property"> = &quot;sed -i -e '{{:s;N;\\#//#{{p ;d}}; \\!#!{{p;d}} ; s/\\n//g;t s}}' {file} ; sed -i -e 's/}}/}}\\n\\n/g' {file} ; indent -linux -sob -l120 {file} ; sed -i -e '/^$/{{N; s/\\n\\([\\t ]*}}\\)$/\\1/}}' -e '/{{$/{{N; s/{{\\n$/{{/}}' {file}&quot;</em><a class="headerlink" href="#lbm.LBMSim.format_cmd" title="Permalink to this definition">¶</a></dt>
+<dd><p>The command to use to automatically format the compute unit source code.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.kernel_file">
+<tt class="descname">kernel_file</tt><em class="property"> = 'single_fluid.mako'</em><a class="headerlink" href="#lbm.LBMSim.kernel_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>File name of the mako template containing the kernel code.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.sim_info">
+<tt class="descname">sim_info</tt><a class="headerlink" href="#lbm.LBMSim.sim_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dictionary of simulation settings.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lbm.LBMSim.time">
+<tt class="descname">time</tt><a class="headerlink" href="#lbm.LBMSim.time" title="Permalink to this definition">¶</a></dt>
+<dd><p>The current simulation time in simulation units.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="lbm.get_backends">
+<tt class="descclassname">lbm.</tt><tt class="descname">get_backends</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.get_backends" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of available backends.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="lbm.get_vis_engines">
+<tt class="descclassname">lbm.</tt><tt class="descname">get_vis_engines</tt><big>(</big><big>)</big><a class="headerlink" href="#lbm.get_vis_engines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of available visaulization engines.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-geo">
+<span id="geometry"></span><h2>Geometry<a class="headerlink" href="#module-geo" title="Permalink to this headline">¶</a></h2>
+<p>Classes used to specify LB simulation geometry.</p>
+<dl class="class">
+<dt id="geo.LBMBC">
+<em class="property">class </em><tt class="descclassname">geo.</tt><tt class="descname">LBMBC</tt><big>(</big><em>name</em>, <em>supported_types=set([0</em>, <em>1</em>, <em>2</em>, <em>3</em>, <em>4</em>, <em>5</em>, <em>6])</em>, <em>dims=set([2</em>, <em>3])</em>, <em>location=0.0</em>, <em>wet_nodes=False</em><big>)</big><a class="headerlink" href="#geo.LBMBC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic boundary condition class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> &#8211; a string representing the boundary condition</li>
+<li><strong>location</strong> &#8211; location of the boundary; if 0.0, the boundary is exactly at the node; otherwise,
+the boundary is located at &#8216;location&#8217; * normal vector (pointing into the fluid domain)
+away from the node</li>
+<li><strong>wet_nodes</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, the boundary condition nodes represent fluid particles
+and undergo standard collisions</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="geo.LBMGeo">
+<em class="property">class </em><tt class="descclassname">geo.</tt><tt class="descname">LBMGeo</tt><big>(</big><em>shape</em>, <em>options</em>, <em>float</em>, <em>backend</em>, <em>sim</em><big>)</big><a class="headerlink" href="#geo.LBMGeo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class for the LBM geometry.</p>
+<dl class="method">
+<dt id="geo.LBMGeo.add_force_object">
+<tt class="descname">add_force_object</tt><big>(</big><em>obj_id</em>, <em>location</em>, <em>size</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.add_force_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scan the box defined by location and size for nodes and links that cross
+the fluid-solid interface. This function should be called from <a class="reference internal" href="#geo.LBMGeo.define_nodes" title="geo.LBMGeo.define_nodes"><tt class="xref py py-meth docutils literal"><span class="pre">define_nodes()</span></tt></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>obj_id</strong> &#8211; object ID (any hashable)</li>
+<li><strong>location</strong> &#8211; n-tuple specifying the top corner of the box to scan</li>
+<li><strong>size</strong> &#8211; n-tuple specifying the dimensions of the box to scan</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.count_active_nodes">
+<tt class="descname">count_active_nodes</tt><big>(</big><big>)</big><a class="headerlink" href="#geo.LBMGeo.count_active_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of active nodes in the simulation domain.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.define_nodes">
+<tt class="descname">define_nodes</tt><big>(</big><big>)</big><a class="headerlink" href="#geo.LBMGeo.define_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define the types of all nodes in the simulation domain.</p>
+<p>Subclasses need to override this method to specify the geometry to be used
+in the simulation.</p>
+<p>Use <a class="reference internal" href="#geo.LBMGeo.set_geo" title="geo.LBMGeo.set_geo"><tt class="xref py py-meth docutils literal"><span class="pre">set_geo()</span></tt></a> and <a class="reference internal" href="#geo.LBMGeo.fill_geo" title="geo.LBMGeo.fill_geo"><tt class="xref py py-meth docutils literal"><span class="pre">fill_geo()</span></tt></a> to set the type of nodes.  By default,
+all nodes are set as fluid nodes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.fill_dist">
+<tt class="descname">fill_dist</tt><big>(</big><em>location</em>, <em>dist</em>, <em>target=None</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.fill_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fill (a part of) the simulation domain with distributions from a specific node(s).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>location</strong> &#8211; location of the node, a n-tuple.  The location can also be a row,
+in which case the coordinate spanning the row should be set to slice(None).</li>
+<li><strong>dist</strong> &#8211; the distribution array</li>
+<li><strong>target</strong> &#8211; if not None, a n-tuple representing the area to which the data from
+the specified node is to be propagated</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.fill_geo">
+<tt class="descname">fill_geo</tt><big>(</big><em>location</em>, <em>target=None</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.fill_geo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fill (a part of) the simulation domain with boundary conditions from a specific node(s).</p>
+<p>See <a class="reference internal" href="#geo.LBMGeo.fill_dist" title="geo.LBMGeo.fill_dist"><tt class="xref py py-meth docutils literal"><span class="pre">fill_dist()</span></tt></a> for a description of the parameters.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.force">
+<tt class="descname">force</tt><big>(</big><em>obj_id</em>, <em>dist</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.force" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the force the fluid exerts on a solid object.</p>
+<p>The force is calculated for a time t - Delta t / 2, given distributions
+at time t.</p>
+<p>To illustrate how the force is calculated, consider the following simplified
+case of momemntum transfer across the boundary (|):</p>
+<div class="highlight-python"><pre>t = 0    &lt;-y-- S --x-&gt;  |  &lt;-a-- F -b--&gt;
+t = 1    &lt;-a'- S --z-&gt;  |  &lt;-c-- F -x'-&gt;</pre>
+</div>
+<p>Primes denote quantities after relaxation.  The amount of momentum transferred
+from the fluid node (F) to the solid node (S) is equal to a&#8217; - x&#8217;.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>obj_id</strong> &#8211; object ID</li>
+<li><strong>dist</strong> &#8211; the distribution array for the current time step</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">force exterted on the selected object (a n-vector)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.get_reynolds">
+<tt class="descname">get_reynolds</tt><big>(</big><em>viscosity</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.get_reynolds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Reynolds number for this geometry.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.init_dist">
+<tt class="descname">init_dist</tt><big>(</big><em>dist</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.init_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the particle distributions in the whole simulation domain.</p>
+<p>Subclasses can override this method to provide initial conditions for
+the simulation at the particle distribution level.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.init_fields">
+<tt class="descname">init_fields</tt><big>(</big><big>)</big><a class="headerlink" href="#geo.LBMGeo.init_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the macroscopic fields in the whole simulation domain.</p>
+<p>Subclasses can override this method to provide initial conditions for
+the simulation at the macroscopic fields level.  The field values will
+later be used to initialize the distributions to their equilibrium
+values.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.mask_array_by_fluid">
+<tt class="descname">mask_array_by_fluid</tt><big>(</big><em>array</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.mask_array_by_fluid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mask an array so that only fluid nodes are active.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>array</strong> &#8211; a numpy array of the same dimensionality as the simulation domain.
+This will usually be an array containing the macroscopic variables (velocity, density).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.reset">
+<tt class="descname">reset</tt><big>(</big><big>)</big><a class="headerlink" href="#geo.LBMGeo.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a full reset of the geometry.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.set_geo">
+<tt class="descname">set_geo</tt><big>(</big><em>location</em>, <em>type_</em>, <em>val=None</em>, <em>update=False</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.set_geo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the type of a grid node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>location</strong> &#8211; location of the node</li>
+<li><strong>type</strong> &#8211; type of the node, one of the NODE_* constants</li>
+<li><strong>val</strong> &#8211; optional argument for the node, e.g. the value of velocity or pressure</li>
+<li><strong>update</strong> &#8211; whether to automatically update the geometry for the
+simulation by copying it to the compute unit</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.set_geo_from_bool_array">
+<tt class="descname">set_geo_from_bool_array</tt><big>(</big><em>array</em>, <em>update=False</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.set_geo_from_bool_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the geometry for the whole simulation domain using a numpy bool
+array.</p>
+<p>The order of the axes in the array should be [z,],y,x.  The locations
+corresponding to the elements of the array with the value <tt class="docutils literal"><span class="pre">True</span></tt> will
+be marked as wall (no-slip) nodes, and the ones corresponding to the
+value <tt class="docutils literal"><span class="pre">False</span></tt> will not be changed.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>array</strong> &#8211; a numpy bool array representing the geometry</li>
+<li><strong>update</strong> &#8211; whether to automatically update the geometry for the
+simulation by copying it to the compute unit</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="geo.LBMGeo.velocity_to_dist">
+<tt class="descname">velocity_to_dist</tt><big>(</big><em>location</em>, <em>velocity</em>, <em>dist</em>, <em>rho=1.0</em><big>)</big><a class="headerlink" href="#geo.LBMGeo.velocity_to_dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the distributions for a node so that the fluid there has a specific velocity.</p>
+<p>This function is used to set the initial conditions for the simulation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>location</strong> &#8211; location of the node, one of the following:
+1) a n-tuple specifyfing the location
+2) a numpy bool matrix
+3) a slice object</li>
+<li><strong>velocity</strong> &#8211; velocity to set, a n-tuple of floats or numpy arrays</li>
+<li><strong>dist</strong> &#8211; the distribution array</li>
+<li><strong>rho</strong> &#8211; the density to use for the node, a float or a numpy array</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_BOUNDARY">
+<tt class="descname">NODE_BOUNDARY</tt><em class="property"> = 5</em><a class="headerlink" href="#geo.LBMGeo.NODE_BOUNDARY" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boundary nodes of FSI objects.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_FLUID">
+<tt class="descname">NODE_FLUID</tt><em class="property"> = 0</em><a class="headerlink" href="#geo.LBMGeo.NODE_FLUID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fluid node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_PRESSURE">
+<tt class="descname">NODE_PRESSURE</tt><em class="property"> = 4</em><a class="headerlink" href="#geo.LBMGeo.NODE_PRESSURE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pressure boundary condition node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_SLIP">
+<tt class="descname">NODE_SLIP</tt><em class="property"> = 6</em><a class="headerlink" href="#geo.LBMGeo.NODE_SLIP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Slip node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_UNUSED">
+<tt class="descname">NODE_UNUSED</tt><em class="property"> = 2</em><a class="headerlink" href="#geo.LBMGeo.NODE_UNUSED" title="Permalink to this definition">¶</a></dt>
+<dd><p>A node completely surrounded by wall nodes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_VELOCITY">
+<tt class="descname">NODE_VELOCITY</tt><em class="property"> = 3</em><a class="headerlink" href="#geo.LBMGeo.NODE_VELOCITY" title="Permalink to this definition">¶</a></dt>
+<dd><p>Velocity boundary condition node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.NODE_WALL">
+<tt class="descname">NODE_WALL</tt><em class="property"> = 1</em><a class="headerlink" href="#geo.LBMGeo.NODE_WALL" title="Permalink to this definition">¶</a></dt>
+<dd><p>No-slip boundary condition node.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.dim">
+<tt class="descname">dim</tt><em class="property"> = 0</em><a class="headerlink" href="#geo.LBMGeo.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dimensionality, needs to be overridden in subclasses.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.dx">
+<tt class="descname">dx</tt><a class="headerlink" href="#geo.LBMGeo.dx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lattice spacing in simulation units.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.LBMGeo.ic_fields">
+<tt class="descname">ic_fields</tt><em class="property"> = True</em><a class="headerlink" href="#geo.LBMGeo.ic_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use <a class="reference internal" href="#geo.LBMGeo.init_fields" title="geo.LBMGeo.init_fields"><tt class="xref py py-meth docutils literal"><span class="pre">init_fields()</span></tt></a> for initial conditions if True, and <a class="reference internal" href="#geo.LBMGeo.init_dist" title="geo.LBMGeo.init_dist"><tt class="xref py py-meth docutils literal"><span class="pre">init_dist()</span></tt></a> otherwise.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="geo.LBMGeo2D">
+<em class="property">class </em><tt class="descclassname">geo.</tt><tt class="descname">LBMGeo2D</tt><big>(</big><em>shape</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#geo.LBMGeo2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for 2D geometries.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="geo.LBMGeo3D">
+<em class="property">class </em><tt class="descclassname">geo.</tt><tt class="descname">LBMGeo3D</tt><big>(</big><em>shape</em>, <em>*args</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#geo.LBMGeo3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for 3D geometries.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="geo.NodeInfo">
+<em class="property">class </em><tt class="descclassname">geo.</tt><tt class="descname">NodeInfo</tt><a class="headerlink" href="#geo.NodeInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>NodeInfo(misc, type)</p>
+<dl class="attribute">
+<dt id="geo.NodeInfo.misc">
+<tt class="descname">misc</tt><a class="headerlink" href="#geo.NodeInfo.misc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="geo.NodeInfo.type">
+<tt class="descname">type</tt><a class="headerlink" href="#geo.NodeInfo.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sym">
+<span id="symbolic-computation"></span><h2>Symbolic computation<a class="headerlink" href="#module-sym" title="Permalink to this headline">¶</a></h2>
+<p>Helper code for symbolic processing and RTCG.</p>
+<dl class="class">
+<dt id="sym.TargetDist">
+<em class="property">class </em><tt class="descclassname">sym.</tt><tt class="descname">TargetDist</tt><a class="headerlink" href="#sym.TargetDist" title="Permalink to this definition">¶</a></dt>
+<dd><p>TargetDist(var, idx)</p>
+<dl class="attribute">
+<dt id="sym.TargetDist.idx">
+<tt class="descname">idx</tt><a class="headerlink" href="#sym.TargetDist.idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sym.TargetDist.var">
+<tt class="descname">var</tt><a class="headerlink" href="#sym.TargetDist.var" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.bb_swap_pairs">
+<tt class="descclassname">sym.</tt><tt class="descname">bb_swap_pairs</tt><big>(</big><em>grid</em><big>)</big><a class="headerlink" href="#sym.bb_swap_pairs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a set of indices which have to be swapped for a full bounce-back.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.bgk_equilibrium">
+<tt class="descclassname">sym.</tt><tt class="descname">bgk_equilibrium</tt><big>(</big><em>grid</em>, <em>rho=None</em>, <em>rho0=None</em><big>)</big><a class="headerlink" href="#sym.bgk_equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get expressions for the BGK equilibrium distribution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grid</strong> &#8211; the grid class to be used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list of sympy epxressions representing the equilibrium distribution functions</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.bgk_external_force">
+<tt class="descclassname">sym.</tt><tt class="descname">bgk_external_force</tt><big>(</big><em>grid</em>, <em>grid_num=0</em><big>)</big><a class="headerlink" href="#sym.bgk_external_force" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get expressions for the external body force correction in the BGK model.</p>
+<p>This implements the external force as in Eq. 20 from PhysRevE 65, 046308.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grid</strong> &#8211; the grid class to be used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list of sympy expressions (in the same order as the current grid&#8217;s basis)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.body_force_accel">
+<tt class="descclassname">sym.</tt><tt class="descname">body_force_accel</tt><big>(</big><em>i</em>, <em>dim</em>, <em>forces</em>, <em>accel=True</em><big>)</big><a class="headerlink" href="#sym.body_force_accel" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>i</strong> &#8211; grid number</li>
+<li><strong>forces</strong> &#8211; forces dictionary (see lbm.py)</li>
+<li><strong>accel</strong> &#8211; if True, returns an acceleration expression; returns a force
+expresssion otherwise</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.cexpr">
+<tt class="descclassname">sym.</tt><tt class="descname">cexpr</tt><big>(</big><em>sim</em>, <em>incompressible</em>, <em>pointers</em>, <em>ex</em>, <em>rho</em>, <em>aliases=True</em>, <em>vectors=False</em>, <em>phi=None</em><big>)</big><a class="headerlink" href="#sym.cexpr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a SymPy expression into a string containing valid C code.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sim</strong> &#8211; the main simulation class (descendant of <tt class="xref py py-class docutils literal"><span class="pre">LBMSim</span></tt>)</li>
+<li><strong>incompressible</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, use the incompressible model</li>
+<li><strong>pointers</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, macroscopic variables (density and velocities)
+will be converted to pointers in the output</li>
+<li><strong>ex</strong> &#8211; the sympy expression to convert</li>
+<li><strong>rho</strong> &#8211; density symbol (sympy Symbol, string).  If <tt class="docutils literal"><span class="pre">None</span></tt> the
+standard rho symbol for the grid will be used.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string representing the C code</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.equilibrium_expr">
+<tt class="descclassname">sym.</tt><tt class="descname">equilibrium_expr</tt><big>(</big><em>eq</em>, <em>eq_vars</em><big>)</big><a class="headerlink" href="#sym.equilibrium_expr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Substitute any additional variables directly into the expressions for the equilibrium distribution.</p>
+<p>Equilibrium distributions can use additional local variables, which are stored in the
+form of sympy equalities in the second element of the equilibrium pair.  If the abliity
+to directly evalute the equilibrium distribution is required, this function will substitute
+the local variables into the expressions.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.ex_rho">
+<tt class="descclassname">sym.</tt><tt class="descname">ex_rho</tt><big>(</big><em>grid</em>, <em>distp</em>, <em>incompressible</em>, <em>missing_dir=None</em><big>)</big><a class="headerlink" href="#sym.ex_rho" title="Permalink to this definition">¶</a></dt>
+<dd><p>Express density as a function of the distributions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>distp</strong> &#8211; name of the pointer to the distribution structure</li>
+<li><strong>incompressible</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, an expression for the incompressible
+model will be returned</li>
+<li><strong>missing_dir</strong> &#8211; direction number specified if an expression for
+a node where not all distributions are known is necessary. This
+parameter identifies the normal vector pointing towards the
+fluid (i.e. the distributions in this direction are unknown).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sympy expression for the density</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.ex_velocity">
+<tt class="descclassname">sym.</tt><tt class="descname">ex_velocity</tt><big>(</big><em>grid</em>, <em>distp</em>, <em>comp</em>, <em>momentum=False</em>, <em>missing_dir=None</em>, <em>par_rho=None</em><big>)</big><a class="headerlink" href="#sym.ex_velocity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Express velocity as a function of the distributions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>distp</strong> &#8211; name of the pointer to the distribution structure</li>
+<li><strong>comp</strong> &#8211; velocity component number: 0, 1 or 2 (for 3D lattices)</li>
+<li><strong>momentum</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, an expression for momentum is returned instead
+of for velocity</li>
+<li><strong>missing_dir</strong> &#8211; direction number specified if an expression for
+a node where not all distributions are known is necessary. This
+parameter identifies the normal vector pointing towards the
+fluid (i.e. the distributions in this direction are unknown).</li>
+<li><strong>par_rho</strong> &#8211; name of the variable (a string) containing the externally
+imposed density (e.g. from a boundary condition)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sympy expression for the velocity in a given direction</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.get_prop_dists">
+<tt class="descclassname">sym.</tt><tt class="descname">get_prop_dists</tt><big>(</big><em>grid</em>, <em>dir</em><big>)</big><a class="headerlink" href="#sym.get_prop_dists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a list of base vectors with a specific value of the X component (<cite>dir</cite>).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.lambdify_equilibrium">
+<tt class="descclassname">sym.</tt><tt class="descname">lambdify_equilibrium</tt><big>(</big><em>sim</em><big>)</big><a class="headerlink" href="#sym.lambdify_equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a lambdified version of the equilibrium distribution.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sim</strong> &#8211; a lbm.LBMSim instance</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">iterable of Q callables, Q being the number of basis vectors
+for the grid used in <cite>sim</cite></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.orthogonalize">
+<tt class="descclassname">sym.</tt><tt class="descname">orthogonalize</tt><big>(</big><em>*vectors</em><big>)</big><a class="headerlink" href="#sym.orthogonalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ortogonalize a set of vectors.</p>
+<p>Given a set of vectors orthogonalize them using the GramSchmidt procedure.
+The vectors are then simplified (common factors are removed to keep their
+norm small).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vectors</strong> &#8211; a collection of vectors to orthogonalize</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">orthogonalized vectors</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.poly_factorize">
+<tt class="descclassname">sym.</tt><tt class="descname">poly_factorize</tt><big>(</big><em>poly</em><big>)</big><a class="headerlink" href="#sym.poly_factorize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Factorize multivariate polynomials into a sum of products of monomials.</p>
+<p>This function can be used to decompose polynomials into a form which
+minimizes the number of additions and multiplications, and which thus
+can be evaluated efficently.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sym.shallow_water_equilibrium">
+<tt class="descclassname">sym.</tt><tt class="descname">shallow_water_equilibrium</tt><big>(</big><em>grid</em><big>)</big><a class="headerlink" href="#sym.shallow_water_equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get expressions for the BGK equilibrium distribution for the shallow
+water equation.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Sailfish API</a><ul>
+<li><a class="reference internal" href="#module-lbm">Simulation</a></li>
+<li><a class="reference internal" href="#module-geo">Geometry</a></li>
+<li><a class="reference internal" href="#module-sym">Symbolic computation</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="regtest-drag_coefficient.html"
+                        title="previous chapter">Drag coefficient of a sphere (3D)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="about.html"
+                        title="next chapter">About</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/api.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul><h3>External links</h3>
+<ul class="this-page-menu">
+	<li><a href="http://gitorious.org/sailfish" rel="nofollow">Download</a></li>
+</ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="about.html" title="About"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="regtest-drag_coefficient.html" title="Drag coefficient of a sphere (3D)"
+             >previous</a> |</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2009-2010, Michał Januszewski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+    </div>
+  </body>
+</html>

@@ -3,16 +3,13 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Sailfish API &mdash; Sailfish 0.2-alpha1 documentation</title>
-    
+    <title>Sailfish API &mdash; Sailfish v0.2-alpha1 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -26,7 +23,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="top" title="Sailfish v0.2-alpha1 documentation" href="index.html" />
     <link rel="next" title="About" href="about.html" />
     <link rel="prev" title="Drag coefficient of a sphere (3D)" href="regtest-drag_coefficient.html" /> 
   </head>
@@ -46,7 +43,7 @@
         <li class="right" >
           <a href="regtest-drag_coefficient.html" title="Drag coefficient of a sphere (3D)"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -81,7 +78,7 @@ returns the grid with the highest connectivity.</p>
 
 <dl class="attribute">
 <dt id="lb_base.LBSim.nonlocality">
-<tt class="descname">nonlocality</tt><em class="property"> = 0</em><a class="headerlink" href="#lb_base.LBSim.nonlocality" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">nonlocality</tt><a class="headerlink" href="#lb_base.LBSim.nonlocality" title="Permalink to this definition">¶</a></dt>
 <dd><p>How many layers of nearest neighbors nodes are required by the model.</p>
 </dd></dl>
 
@@ -95,10 +92,14 @@ returns the grid with the highest connectivity.</p>
 <dl class="method">
 <dt id="lb_single.LBFluidSim.get_compute_kernels">
 <tt class="descname">get_compute_kernels</tt><big>(</big><em>runner</em>, <em>full_output</em>, <em>bulk</em><big>)</big><a class="headerlink" href="#lb_single.LBFluidSim.get_compute_kernels" title="Permalink to this definition">¶</a></dt>
-<dd><p>Args:
-full_output: if True, returns kernels that prepare fields for</p>
-<blockquote>
-<div>visualization or saving into a file</div></blockquote>
+<dd><dl class="docutils">
+<dt>Args:</dt>
+<dd><dl class="first last docutils">
+<dt>full_output: if True, returns kernels that prepare fields for</dt>
+<dd>visualization or saving into a file</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="attribute">
@@ -124,10 +125,10 @@ and are never mixed in this addition process.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>force</strong> &#8211; n-vector representing the force value</li>
 <li><strong>grid</strong> &#8211; grid number on which this force is acting</li>
-<li><strong>accel</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, the added field is an acceleration field, otherwise
+<li><strong>accel</strong> &#8211; if <tt class="xref docutils literal"><span class="pre">True</span></tt>, the added field is an acceleration field, otherwise
 it is an actual force field</li>
 </ul>
 </td>
@@ -210,9 +211,9 @@ covering the whole domain.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grid</strong> &#8211; the grid class to be used</td>
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grid</strong> &#8211; the grid class to be used</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list of sympy epxressions representing the equilibrium distribution functions</td>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">list of sympy epxressions representing the equilibrium distribution functions</td>
 </tr>
 </tbody>
 </table>
@@ -227,9 +228,9 @@ covering the whole domain.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grid</strong> &#8211; the grid class to be used</td>
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grid</strong> &#8211; the grid class to be used</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list of sympy expressions (in the same order as the current grid&#8217;s basis)</td>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">list of sympy expressions (in the same order as the current grid&#8217;s basis)</td>
 </tr>
 </tbody>
 </table>
@@ -242,7 +243,7 @@ covering the whole domain.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>i</strong> &#8211; grid number</li>
 <li><strong>forces</strong> &#8211; forces dictionary (see lbm.py)</li>
 <li><strong>accel</strong> &#8211; if True, returns an acceleration expression; returns a force
@@ -262,18 +263,18 @@ expresssion otherwise</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>sim</strong> &#8211; the main simulation class (descendant of <tt class="xref py py-class docutils literal"><span class="pre">LBMSim</span></tt>)</li>
-<li><strong>incompressible</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, use the incompressible model</li>
-<li><strong>pointers</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, macroscopic variables (density and velocities)
+<li><strong>incompressible</strong> &#8211; if <tt class="xref docutils literal"><span class="pre">True</span></tt>, use the incompressible model</li>
+<li><strong>pointers</strong> &#8211; if <tt class="xref docutils literal"><span class="pre">True</span></tt>, macroscopic variables (density and velocities)
 will be converted to pointers in the output</li>
 <li><strong>ex</strong> &#8211; the sympy expression to convert</li>
-<li><strong>rho</strong> &#8211; density symbol (sympy Symbol, string).  If <tt class="docutils literal"><span class="pre">None</span></tt> the
+<li><strong>rho</strong> &#8211; density symbol (sympy Symbol, string).  If <tt class="xref docutils literal"><span class="pre">None</span></tt> the
 standard rho symbol for the grid will be used.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string representing the C code</p>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string representing the C code</p>
 </td>
 </tr>
 </tbody>
@@ -298,9 +299,9 @@ the local variables into the expressions.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>distp</strong> &#8211; name of the pointer to the distribution structure</li>
-<li><strong>incompressible</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, an expression for the incompressible
+<li><strong>incompressible</strong> &#8211; if <tt class="xref docutils literal"><span class="pre">True</span></tt>, an expression for the incompressible
 model will be returned</li>
 <li><strong>missing_dir</strong> &#8211; direction number specified if an expression for
 a node where not all distributions are known is necessary. This
@@ -309,7 +310,7 @@ fluid (i.e. the distributions in this direction are unknown).</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sympy expression for the density</p>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sympy expression for the density</p>
 </td>
 </tr>
 </tbody>
@@ -324,10 +325,10 @@ fluid (i.e. the distributions in this direction are unknown).</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>distp</strong> &#8211; name of the pointer to the distribution structure</li>
 <li><strong>comp</strong> &#8211; velocity component number: 0, 1 or 2 (for 3D lattices)</li>
-<li><strong>momentum</strong> &#8211; if <tt class="docutils literal"><span class="pre">True</span></tt>, an expression for momentum is returned instead
+<li><strong>momentum</strong> &#8211; if <tt class="xref docutils literal"><span class="pre">True</span></tt>, an expression for momentum is returned instead
 of for velocity</li>
 <li><strong>missing_dir</strong> &#8211; direction number specified if an expression for
 a node where not all distributions are known is necessary. This
@@ -338,7 +339,7 @@ imposed density (e.g. from a boundary condition)</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sympy expression for the velocity in a given direction</p>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sympy expression for the velocity in a given direction</p>
 </td>
 </tr>
 </tbody>
@@ -366,9 +367,9 @@ to a node pointed to by the vector &#8216;direction&#8217;.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sim</strong> &#8211; a lbm.LBMSim instance</td>
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sim</strong> &#8211; a lbm.LBMSim instance</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">iterable of Q callables, Q being the number of basis vectors
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">iterable of Q callables, Q being the number of basis vectors
 for the grid used in <cite>sim</cite></td>
 </tr>
 </tbody>
@@ -386,9 +387,9 @@ norm small).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vectors</strong> &#8211; a collection of vectors to orthogonalize</td>
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vectors</strong> &#8211; a collection of vectors to orthogonalize</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">orthogonalized vectors</td>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">orthogonalized vectors</td>
 </tr>
 </tbody>
 </table>
@@ -446,7 +447,7 @@ water equation.</p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" size="18" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -475,12 +476,12 @@ water equation.</p>
         <li class="right" >
           <a href="regtest-drag_coefficient.html" title="Drag coefficient of a sphere (3D)"
              >previous</a> |</li>
-        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2009-2010, Michał Januszewski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
     </div>
   </body>
 </html>

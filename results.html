@@ -3,16 +3,13 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Simulation results processing &mdash; Sailfish 0.2-alpha1 documentation</title>
-    
+    <title>Simulation results processing &mdash; Sailfish v0.2-alpha1 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -26,10 +23,10 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="top" title="Sailfish v0.2-alpha1 documentation" href="index.html" />
     <link rel="up" title="Tutorial" href="tutorial.html" />
-    <link rel="next" title="Supported models, grids and boundary conditions" href="models.html" />
-    <link rel="prev" title="Setting up simulations" href="simulations.html" /> 
+    <link rel="next" title="Distributed simulations on a cluster" href="distributed_simulations.html" />
+    <link rel="prev" title="Setting up simulations" href="simulation_setup.html" /> 
   </head>
   <body>
     <div class="related">
@@ -42,12 +39,12 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="models.html" title="Supported models, grids and boundary conditions"
+          <a href="distributed_simulations.html" title="Distributed simulations on a cluster"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="simulations.html" title="Setting up simulations"
+          <a href="simulation_setup.html" title="Setting up simulations"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li>
           <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
       </ul>
     </div>  
@@ -74,29 +71,29 @@ values listed in the &#8220;Parameter name&#8221; column below:</p>
 <col width="46%" />
 </colgroup>
 <thead valign="bottom">
-<tr class="row-odd"><th class="head">Data format</th>
+<tr><th class="head">Data format</th>
 <th class="head">Parameter name</th>
 <th class="head">Required Python modules</th>
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td>HDF5 (flat)</td>
+<tr><td>HDF5 (flat)</td>
 <td>h5flat</td>
 <td>pytables</td>
 </tr>
-<tr class="row-odd"><td>HDF5 (nested)</td>
+<tr><td>HDF5 (nested)</td>
 <td>h5nested</td>
 <td>pytables</td>
 </tr>
-<tr class="row-even"><td>VTK</td>
+<tr><td>VTK</td>
 <td>vtk</td>
 <td>tvtk</td>
 </tr>
-<tr class="row-odd"><td>numpy archive</td>
+<tr><td>numpy archive</td>
 <td>npy</td>
 <td>numpy</td>
 </tr>
-<tr class="row-even"><td>MatLab array</td>
+<tr><td>MatLab array</td>
 <td>mat</td>
 <td>scipy</td>
 </tr>
@@ -148,46 +145,46 @@ keys are defined:</p>
 <col width="95%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">-</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">-</span></tt></td>
 <td>previous scalar field</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">=</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">=</span></tt></td>
 <td>next scalar field</td>
 </tr>
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">[</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">[</span></tt></td>
 <td>previous color map</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">]</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">]</span></tt></td>
 <td>next color map</td>
 </tr>
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">i</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">i</span></tt></td>
 <td>toggle visibility of text info about the state of the simulation (MLUPS, iteration etc.)</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">v</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">v</span></tt></td>
 <td>toggle visualization of the velocity vector field</td>
 </tr>
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">t</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">t</span></tt></td>
 <td>toggle visualization of the fluid tracer particles</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">c</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">c</span></tt></td>
 <td>toggle convolution of the visualization with a Gaussian kernel (this has a smoothing effect)</td>
 </tr>
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">e</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">e</span></tt></td>
 <td>apply the emboss filter to the visualization (useful to monitor sound waves)</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">r</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">r</span></tt></td>
 <td>reset the simulation geometry (this clears any obstacles added interactively)</td>
 </tr>
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">q</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">q</span></tt></td>
 <td>quit the simulation</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">s</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">s</span></tt></td>
 <td>take a screenshot</td>
 </tr>
-<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">,</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">,</span></tt></td>
 <td>decrease the max value used in the color map</td>
 </tr>
-<tr class="row-even"><td><tt class="docutils literal"><span class="pre">.</span></tt></td>
+<tr><td><tt class="docutils literal"><span class="pre">.</span></tt></td>
 <td>increase the max value used in the color map</td>
 </tr>
 </tbody>
@@ -226,11 +223,11 @@ the cutplane along the selected axis.  Tracer particles are not supported in the
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="simulations.html"
+  <p class="topless"><a href="simulation_setup.html"
                         title="previous chapter">Setting up simulations</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="models.html"
-                        title="next chapter">Supported models, grids and boundary conditions</a></p>
+  <p class="topless"><a href="distributed_simulations.html"
+                        title="next chapter">Distributed simulations on a cluster</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/results.txt"
@@ -242,7 +239,7 @@ the cutplane along the selected axis.  Tracer particles are not supported in the
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" size="18" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -266,18 +263,18 @@ the cutplane along the selected axis.  Tracer particles are not supported in the
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="models.html" title="Supported models, grids and boundary conditions"
+          <a href="distributed_simulations.html" title="Distributed simulations on a cluster"
              >next</a> |</li>
         <li class="right" >
-          <a href="simulations.html" title="Setting up simulations"
+          <a href="simulation_setup.html" title="Setting up simulations"
              >previous</a> |</li>
-        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li>
           <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2009-2010, Michał Januszewski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
     </div>
   </body>
 </html>

@@ -3,16 +3,13 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Distributed simulations on a cluster &mdash; Sailfish 0.2-alpha1 documentation</title>
-    
+    <title>Distributed simulations on a cluster &mdash; Sailfish v0.2-alpha1 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -26,10 +23,10 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
+    <link rel="top" title="Sailfish v0.2-alpha1 documentation" href="index.html" />
     <link rel="up" title="Tutorial" href="tutorial.html" />
     <link rel="next" title="Supported models, grids and boundary conditions" href="models.html" />
-    <link rel="prev" title="Setting up simulations" href="simulation_setup.html" /> 
+    <link rel="prev" title="Simulation results processing" href="results.html" /> 
   </head>
   <body>
     <div class="related">
@@ -45,9 +42,9 @@
           <a href="models.html" title="Supported models, grids and boundary conditions"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="simulation_setup.html" title="Setting up simulations"
+          <a href="results.html" title="Simulation results processing"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li>
           <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
       </ul>
     </div>  
@@ -59,23 +56,23 @@
             
   <div class="section" id="distributed-simulations-on-a-cluster">
 <h1>Distributed simulations on a cluster<a class="headerlink" href="#distributed-simulations-on-a-cluster" title="Permalink to this headline">¶</a></h1>
-<p>Sailfish suports running simulations across multiple hosts.  The following
-requirements have to be fulfilled in order for this to work:</p>
-<ul class="simple">
-<li>the user needs an SSH account on each machine,</li>
-<li>all node machines need to be able to connect to each other using TCP connections.</li>
-</ul>
+<p>Sailfish supports running simulations across multiple hosts.  Distributed simulations
+currently require either SSH access to each machine or a cluster with a PBS scheduler
+(e.g. OpenPBS, Torque).  In both cases, all node machines need to be able to connect to
+each other using TCP connections.</p>
+<div class="section" id="using-direct-ssh-connections">
+<h2>Using direct SSH connections<a class="headerlink" href="#using-direct-ssh-connections" title="Permalink to this headline">¶</a></h2>
 <p>A distributed Sailfish simulation is started just like a local simulation,
 the only difference being the presence of the <tt class="docutils literal"><span class="pre">cluster_spec</span></tt> config parameter, whose
-value is a path to a cluster definition file.  If hte path is relative, the controller
+value is a path to a cluster definition file.  If the path is relative, the controller
 will look for it in the current working directory as well as in the <tt class="docutils literal"><span class="pre">.sailfish</span></tt>
 directory in the user&#8217;s home.</p>
 <p>Optionally, the <tt class="docutils literal"><span class="pre">cluster_sync</span></tt>
-argument can also be specifed to automatically sync files from the controller to
+argument can also be specified to automatically sync files from the controller to
 the nodes.  A common value to use here is <tt class="docutils literal"><span class="pre">$PWD:.</span></tt>, which means &#8220;sync the contents
 of the current directory (<tt class="docutils literal"><span class="pre">$PWD</span></tt>) to the working directory on every node (<tt class="docutils literal"><span class="pre">.</span></tt>)&#8221;.</p>
 <div class="section" id="cluster-definition-files">
-<h2>Cluster definition files<a class="headerlink" href="#cluster-definition-files" title="Permalink to this headline">¶</a></h2>
+<h3>Cluster definition files<a class="headerlink" href="#cluster-definition-files" title="Permalink to this headline">¶</a></h3>
 <p>A cluster definition file is a Python script that contains a global <tt class="docutils literal"><span class="pre">nodes</span></tt> list
 of <tt class="xref py py-class docutils literal"><span class="pre">MachineSpec</span></tt> instances.  Each <tt class="xref py py-class docutils literal"><span class="pre">MachineSpec</span></tt> defines a cluster node.
 Here is sample file defining two nodes:</p>
@@ -92,7 +89,7 @@ Here is sample file defining two nodes:</p>
 </pre></div>
 </div>
 <p>The two nodes are located on <tt class="docutils literal"><span class="pre">hosta</span></tt> and <tt class="docutils literal"><span class="pre">hostb</span></tt> respectively, and different
-users are used to get access to both hosts.  The <tt class="docutils literal"><span class="pre">cuda_nvcc</span></tt> and <tt class="docutils literal"><span class="pre">block_size</span></tt>
+user accounts are used to get access to both hosts.  The <tt class="docutils literal"><span class="pre">cuda_nvcc</span></tt> and <tt class="docutils literal"><span class="pre">block_size</span></tt>
 parameters are standard Sailfish config parameters than can be specified from the
 command line for single-host simulations.  Here we use them to provide a location
 of the NVCC compiler and to use a larger CUDA block size on <tt class="docutils literal"><span class="pre">hostb</span></tt> (e.g. because
@@ -105,6 +102,69 @@ is used for load-balancing purposes.  By default, only the first available GPU (
 will be used, even on a multi-GPU machine.</p>
 </div>
 </div>
+<div class="section" id="using-a-pbs-cluster">
+<h2>Using a PBS cluster<a class="headerlink" href="#using-a-pbs-cluster" title="Permalink to this headline">¶</a></h2>
+<p>Running a Sailfish simulation on a PBS cluster requires you to create two script files
+&#8211; one to set up the environment on each node, and a standard PBS job description script.
+The first script will be used internally by the Sailfish controller, and for consistency
+it is probably a good idea to use it in the job description script as well.  The location
+of the script can be specified using the <tt class="docutils literal"><span class="pre">--cluster_pbs_initscript</span></tt> command line option,
+which has a default value of <tt class="docutils literal"><span class="pre">sailfish-init.sh</span></tt>.  Below we give example scripts for the
+user <tt class="docutils literal"><span class="pre">myuser</span></tt> on the ZEUS cluster which is part of the PLGRID infrastructure.  Some details
+such as paths will probably differ on your cluster, so you will need to adjust them accordingly.</p>
+<p>Environment setup script (<tt class="docutils literal"><span class="pre">$HOME/sailfish-init.sh</span></tt>:</p>
+<div class="highlight-python"><pre>#!/bin/bash
+
+# Add paths for Python modules that are not present by default on the cluster and
+# were installed manually for this user.
+export PATH="$PATH:/storage/myuser/bin/"
+export PYTHONPATH="/storage/myuser/lib/python2.7/site-packages:$PWD:$PBS_O_WORKDIR:$PYTHONPATH"
+
+# Assume that the job was submitted from a directory containing a Sailfish installation.
+cd $PBS_O_WORKDIR
+
+# The ZEUS cluster uses the Modules system to install additional software.  The
+# settings below will normally be set automatically by PBS for the _first_ task started
+# within a job.  We need them to be available also on later tasks started by Sailfish,
+# so we copy add the settings into this script.  You can see the environment set up
+# for your job by starting an interactive job with: qsub -I -q &lt;queue&gt; -l nodes=1:ppn:1
+# and then running the env command.
+export MODULE_VERSION=3.2.7
+export MODULE_VERSION_STACK=3.2.7
+export MODULEPATH=/software/local/Modules/versions:/software/local/Modules/$MODULE_VERSION/modulefiles:/software/local/Modules/modulefiles
+export MODULESHOME=/software/local/Modules/3.2.7
+function module {
+        eval `/software/local/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
+}
+
+# Load additional modules, make sure python points to python2.7 for which the
+# Python modules installed by myuser were previously configured.
+module add python/current
+module add numpy/1.6.1
+module add cuda/4.0.17
+alias python=python2.7</pre>
+</div>
+<p>PBS job script (<tt class="docutils literal"><span class="pre">$HOME/sailfish-test.pbs</span></tt>):</p>
+<div class="highlight-python"><pre>#!/bin/sh
+
+#PBS -l nodes=2:ppn=1:gpus=1
+#PBS -N test_sailfish
+#PBS -q gpgpu
+
+. $HOME/sailfish-init.sh
+python ./examples/lbm_cylinder_multi.py --lat_nx=2046 --lat_ny=30000 --block_size=256 --mode=benchmark --vertical \
+        --every=500 --max_iters=2000 --blocks=2 --log=/mnt/lustre/scratch/people/myuser/test.log --verbose</pre>
+</div>
+<p>Once you have both scripts in place and a Saiflish installation in <tt class="docutils literal"><span class="pre">$HOME/mysailfish</span></tt>, you can submit a job
+by running:</p>
+<div class="highlight-python"><pre>cd $HOME/mysailfish
+qsub ../sailfish-test.pbs</pre>
+</div>
+<div class="section" id="how-it-works-behind-the-scenes">
+<h3>How it works behind the scenes<a class="headerlink" href="#how-it-works-behind-the-scenes" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
 
 
           </div>
@@ -115,14 +175,21 @@ will be used, even on a multi-GPU machine.</p>
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Distributed simulations on a cluster</a><ul>
+<li><a class="reference internal" href="#using-direct-ssh-connections">Using direct SSH connections</a><ul>
 <li><a class="reference internal" href="#cluster-definition-files">Cluster definition files</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#using-a-pbs-cluster">Using a PBS cluster</a><ul>
+<li><a class="reference internal" href="#how-it-works-behind-the-scenes">How it works behind the scenes</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="simulation_setup.html"
-                        title="previous chapter">Setting up simulations</a></p>
+  <p class="topless"><a href="results.html"
+                        title="previous chapter">Simulation results processing</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="models.html"
                         title="next chapter">Supported models, grids and boundary conditions</a></p>
@@ -137,7 +204,7 @@ will be used, even on a multi-GPU machine.</p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
+      <input type="text" name="q" size="18" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -164,15 +231,15 @@ will be used, even on a multi-GPU machine.</p>
           <a href="models.html" title="Supported models, grids and boundary conditions"
              >next</a> |</li>
         <li class="right" >
-          <a href="simulation_setup.html" title="Setting up simulations"
+          <a href="results.html" title="Simulation results processing"
              >previous</a> |</li>
-        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
+        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li>
           <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2009-2010, Michał Januszewski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
     </div>
   </body>
 </html>

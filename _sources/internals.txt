@@ -70,7 +70,7 @@ Distributed execution
 ---------------------
 
 A distributed simulation is started by the controller mapping subdomains to
-available nodes (as specified in a cluster definition files).  This is followed
+available nodes (as specified in a cluster definition file).  This is followed
 by establishing an SSH connection to all nodes to which at least one block has been
 assigned.  Once the connection is established, the ``execnet`` module is used to 
 (optionally) sync files from the controller host to the node, and to execute the

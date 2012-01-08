@@ -3,13 +3,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Supported models, grids and boundary conditions &mdash; Sailfish v0.2-alpha1 documentation</title>
+    <title>Supported models, grids and boundary conditions &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -23,7 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="Sailfish v0.2-alpha1 documentation" href="index.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
     <link rel="next" title="Performance Tuning" href="performance.html" />
     <link rel="prev" title="Distributed simulations on a cluster" href="distributed_simulations.html" /> 
   </head>
@@ -43,7 +46,7 @@
         <li class="right" >
           <a href="distributed_simulations.html" title="Distributed simulations on a cluster"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -81,7 +84,7 @@ command line switch.</p>
 <h2>A general overview of the Lattice-Boltzmann method<a class="headerlink" href="#a-general-overview-of-the-lattice-boltzmann-method" title="Permalink to this headline">¶</a></h2>
 <p>The Lattice-Boltzmann method is based on solving the following equation:</p>
 <div class="math">
-<p><img src="_images/math/da19f8d67b15c4229f709384de576772a558dbaf.png" alt="f_\alpha(\vec{x_i} + \vec{e_\alpha}, t + 1) - f_\alpha(\vec{x_i}, t) = \Omega_i" /></p>
+<p><img src="_images/math/da19f8d67b15c4229f709384de576772a558dbaf.png" alt="f_\alpha(\vec{x_i} + \vec{e_\alpha}, t + 1) - f_\alpha(\vec{x_i}, t) = \Omega_i"/></p>
 </div><p>which is a discrete version of the Boltzmann equation known from non-equilibrium
 statistical mechanics.  Here, <img class="math" src="_images/math/b2f35154c6674fdc437c6bd6351cc42a140f6152.png" alt="f_\alpha"/> are distributions of particles
 moving in the direction <img class="math" src="_images/math/38d251dcb9fac031e503f1bd2c3644945696e784.png" alt="\vec{e_\alpha}"/> (the available directions are specified
@@ -95,7 +98,7 @@ operator.</p>
 <p>The BGK (Bhatnagar-Gross-Krook) approximation is based on the following form
 of the collision operator:</p>
 <div class="math">
-<p><img src="_images/math/d07b1db7c5302b21b5dca8fd3c8787d836df4d1f.png" alt="\Omega_i = -\frac{f(\vec{x_i}, t) - f^{(eq)}(\rho_i, \vec{v_i})}{\tau}" /></p>
+<p><img src="_images/math/d07b1db7c5302b21b5dca8fd3c8787d836df4d1f.png" alt="\Omega_i = -\frac{f(\vec{x_i}, t) - f^{(eq)}(\rho_i, \vec{v_i})}{\tau}"/></p>
 </div><p>where <img class="math" src="_images/math/1dc1c0119a604b91be9142370dc3159b6a9bbcb9.png" alt="\tau"/> is the relaxation time and <img class="math" src="_images/math/0f54ab1d4e111cd4769f602fe558a3a45575a67f.png" alt="f^{(eq)}"/> is the equilibrium
 distribution, defined as a function of macroscopic variables at a node.</p>
 <p>TODO: Add more info about the BGK approximation and its limitations.</p>
@@ -194,7 +197,7 @@ It currently works for all types of boundary conditions in two dimensions only.<
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -223,12 +226,12 @@ It currently works for all types of boundary conditions in two dimensions only.<
         <li class="right" >
           <a href="distributed_simulations.html" title="Distributed simulations on a cluster"
              >previous</a> |</li>
-        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li> 
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2009-2010, Michał Januszewski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>
 </html>

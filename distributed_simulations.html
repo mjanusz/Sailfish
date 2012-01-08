@@ -3,13 +3,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
+
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Distributed simulations on a cluster &mdash; Sailfish v0.2-alpha1 documentation</title>
+    <title>Distributed simulations on a cluster &mdash; Sailfish 0.2-alpha1 documentation</title>
+    
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
@@ -23,7 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="author" title="About these documents" href="about.html" />
-    <link rel="top" title="Sailfish v0.2-alpha1 documentation" href="index.html" />
+    <link rel="top" title="Sailfish 0.2-alpha1 documentation" href="index.html" />
     <link rel="up" title="Tutorial" href="tutorial.html" />
     <link rel="next" title="Supported models, grids and boundary conditions" href="models.html" />
     <link rel="prev" title="Simulation results processing" href="results.html" /> 
@@ -44,7 +47,7 @@
         <li class="right" >
           <a href="results.html" title="Simulation results processing"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
           <li><a href="tutorial.html" accesskey="U">Tutorial</a> &raquo;</li> 
       </ul>
     </div>  
@@ -57,8 +60,8 @@
   <div class="section" id="distributed-simulations-on-a-cluster">
 <h1>Distributed simulations on a cluster<a class="headerlink" href="#distributed-simulations-on-a-cluster" title="Permalink to this headline">¶</a></h1>
 <p>Sailfish supports running simulations across multiple hosts.  Distributed simulations
-currently require either SSH access to each machine or a cluster with a PBS scheduler
-(e.g. OpenPBS, Torque).  In both cases, all node machines need to be able to connect to
+currently require either SSH access to each machine or a cluster with a GPU-aware
+PBS scheduler (e.g. Torque).  In both cases, all node machines need to be able to connect to
 each other using TCP connections.</p>
 <div class="section" id="using-direct-ssh-connections">
 <h2>Using direct SSH connections<a class="headerlink" href="#using-direct-ssh-connections" title="Permalink to this headline">¶</a></h2>
@@ -112,7 +115,7 @@ of the script can be specified using the <tt class="docutils literal"><span clas
 which has a default value of <tt class="docutils literal"><span class="pre">sailfish-init.sh</span></tt>.  Below we give example scripts for the
 user <tt class="docutils literal"><span class="pre">myuser</span></tt> on the ZEUS cluster which is part of the PLGRID infrastructure.  Some details
 such as paths will probably differ on your cluster, so you will need to adjust them accordingly.</p>
-<p>Environment setup script (<tt class="docutils literal"><span class="pre">$HOME/sailfish-init.sh</span></tt>:</p>
+<p>Environment setup script (<tt class="docutils literal"><span class="pre">$HOME/sailfish-init.sh</span></tt>):</p>
 <div class="highlight-python"><pre>#!/bin/bash
 
 # Add paths for Python modules that are not present by default on the cluster and
@@ -155,13 +158,35 @@ alias python=python2.7</pre>
 python ./examples/lbm_cylinder_multi.py --lat_nx=2046 --lat_ny=30000 --block_size=256 --mode=benchmark --vertical \
         --every=500 --max_iters=2000 --blocks=2 --log=/mnt/lustre/scratch/people/myuser/test.log --verbose</pre>
 </div>
-<p>Once you have both scripts in place and a Saiflish installation in <tt class="docutils literal"><span class="pre">$HOME/mysailfish</span></tt>, you can submit a job
+<p>Once you have both scripts in place and a Sailfish installation in <tt class="docutils literal"><span class="pre">$HOME/mysailfish</span></tt>, you can submit the job
 by running:</p>
 <div class="highlight-python"><pre>cd $HOME/mysailfish
 qsub ../sailfish-test.pbs</pre>
 </div>
+<div class="section" id="using-infiniband">
+<h3>Using InfiniBand<a class="headerlink" href="#using-infiniband" title="Permalink to this headline">¶</a></h3>
+<p>Sailfish currently does not support InfiniBand (IB) explicitly.  It is however possible
+to utilize IB interconnects by using the <tt class="docutils literal"><span class="pre">libsdp</span></tt> library which makes it possible to automatically
+replace TCP connections with SDP ones.  To do so, you need to:</p>
+<blockquote>
+<div><ul class="simple">
+<li>make sure the <tt class="docutils literal"><span class="pre">ib_sdp</span></tt> kernel module is loaded on the computational nodes,</li>
+<li>add <tt class="docutils literal"><span class="pre">export</span> <span class="pre">LD_PRELOAD=libsdp.so</span></tt> to your <tt class="docutils literal"><span class="pre">sailfish-init.sh</span></tt> script,</li>
+<li>run your simulation with the <tt class="docutils literal"><span class="pre">--cluster_pbs_interface=ib0</span></tt> parameter (this assumes
+the IB interface on the computational nodes is <tt class="docutils literal"><span class="pre">ib0</span></tt>).</li>
+</ul>
+</div></blockquote>
+</div>
 <div class="section" id="how-it-works-behind-the-scenes">
 <h3>How it works behind the scenes<a class="headerlink" href="#how-it-works-behind-the-scenes" title="Permalink to this headline">¶</a></h3>
+<p>If the <tt class="docutils literal"><span class="pre">--cluster_pbs</span></tt> option is set to true (default) and the <tt class="docutils literal"><span class="pre">$PBS_GPUFILE</span></tt>
+environment variable is set, Sailfish will assume it is running on a PBS cluster.
+A cluster specification will be dynamically built using the contents of the
+<tt class="docutils literal"><span class="pre">$PBS_GPUFILE</span></tt>.  For each machine listed in this file, <tt class="docutils literal"><span class="pre">pbsdsh</span></tt> will be used
+to execute <tt class="docutils literal"><span class="pre">--cluster_pbs_initscript</span></tt> (<tt class="docutils literal"><span class="pre">sailfish-init.sh</span></tt> in the previous
+section), followed by <tt class="docutils literal"><span class="pre">python</span> <span class="pre">sailfish/socketserver.py</span></tt> (with a random port).
+The socket server will then be used to establish an execnet channel to the
+node and to start a local machine master.</p>
 </div>
 </div>
 </div>
@@ -180,6 +205,7 @@ qsub ../sailfish-test.pbs</pre>
 </ul>
 </li>
 <li><a class="reference internal" href="#using-a-pbs-cluster">Using a PBS cluster</a><ul>
+<li><a class="reference internal" href="#using-infiniband">Using InfiniBand</a></li>
 <li><a class="reference internal" href="#how-it-works-behind-the-scenes">How it works behind the scenes</a></li>
 </ul>
 </li>
@@ -204,7 +230,7 @@ qsub ../sailfish-test.pbs</pre>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" size="18" />
+      <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
@@ -233,13 +259,13 @@ qsub ../sailfish-test.pbs</pre>
         <li class="right" >
           <a href="results.html" title="Simulation results processing"
              >previous</a> |</li>
-        <li><a href="index.html">Sailfish v0.2-alpha1 documentation</a> &raquo;</li>
+        <li><a href="index.html">Sailfish 0.2-alpha1 documentation</a> &raquo;</li>
           <li><a href="tutorial.html" >Tutorial</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2009-2010, Michał Januszewski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
     </div>
   </body>
 </html>

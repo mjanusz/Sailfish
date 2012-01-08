@@ -2,8 +2,8 @@ Distributed simulations on a cluster
 ====================================
 
 Sailfish supports running simulations across multiple hosts.  Distributed simulations
-currently require either SSH access to each machine or a cluster with a PBS scheduler
-(e.g. OpenPBS, Torque).  In both cases, all node machines need to be able to connect to
+currently require either SSH access to each machine or a cluster with a GPU-aware
+PBS scheduler (e.g. Torque).  In both cases, all node machines need to be able to connect to
 each other using TCP connections.
 
 Using direct SSH connections
@@ -61,7 +61,7 @@ which has a default value of ``sailfish-init.sh``.  Below we give example script
 user ``myuser`` on the ZEUS cluster which is part of the PLGRID infrastructure.  Some details
 such as paths will probably differ on your cluster, so you will need to adjust them accordingly.
 
-Environment setup script (``$HOME/sailfish-init.sh``::
+Environment setup script (``$HOME/sailfish-init.sh``)::
 
     #!/bin/bash
     
@@ -106,11 +106,32 @@ PBS job script (``$HOME/sailfish-test.pbs``)::
     python ./examples/lbm_cylinder_multi.py --lat_nx=2046 --lat_ny=30000 --block_size=256 --mode=benchmark --vertical \
             --every=500 --max_iters=2000 --blocks=2 --log=/mnt/lustre/scratch/people/myuser/test.log --verbose
 
-Once you have both scripts in place and a Saiflish installation in ``$HOME/mysailfish``, you can submit a job
+Once you have both scripts in place and a Sailfish installation in ``$HOME/mysailfish``, you can submit the job
 by running::
 
     cd $HOME/mysailfish
     qsub ../sailfish-test.pbs
 
+Using InfiniBand
+^^^^^^^^^^^^^^^^
+Sailfish currently does not support InfiniBand (IB) explicitly.  It is however possible
+to utilize IB interconnects by using the ``libsdp`` library which makes it possible to automatically
+replace TCP connections with SDP ones.  To do so, you need to:
+
+  * make sure the ``ib_sdp`` kernel module is loaded on the computational nodes,
+  * add ``export LD_PRELOAD=libsdp.so`` to your ``sailfish-init.sh`` script,
+  * run your simulation with the ``--cluster_pbs_interface=ib0`` parameter (this assumes
+    the IB interface on the computational nodes is ``ib0``).
+
 How it works behind the scenes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the ``--cluster_pbs`` option is set to true (default) and the ``$PBS_GPUFILE``
+environment variable is set, Sailfish will assume it is running on a PBS cluster.
+A cluster specification will be dynamically built using the contents of the
+``$PBS_GPUFILE``.  For each machine listed in this file, ``pbsdsh`` will be used
+to execute ``--cluster_pbs_initscript`` (``sailfish-init.sh`` in the previous
+section), followed by ``python sailfish/socketserver.py`` (with a random port).
+The socket server will then be used to establish an execnet channel to the
+node and to start a local machine master.
+

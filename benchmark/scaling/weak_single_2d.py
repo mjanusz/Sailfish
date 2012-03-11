@@ -2,21 +2,22 @@
 import argparse
 import sys
 
-from examples.lbc_2d import LDCSim
+from examples.ldc_2d import LDCSim
 from sailfish.controller import LBSimulationController
 from sailfish.geo import EqualSubdomainsGeometry2D
 
 
 def run_benchmark(num_blocks):
-    global num_blocks
     settings = {
-        'mode': 'benchmark',
+#        'mode': 'benchmark',
         'max_iters': 1000,
         'every': 500,
         'quiet': True,
         'block_size': 128,
         'subdomains': num_blocks,
         'conn_axis': 'y',
+        'gpus': [0,2],
+        'mode': 'benchmark',
         'lat_nx': 5118,
         'lat_ny': 5800 * num_blocks,
         }
@@ -45,6 +46,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_blocks', type=int, default=1)
     args, remaining = parser.parse_known_args()
-    del sys.argv[:1]
+    del sys.argv[1:]
     sys.argv.extend(remaining)
-    run_benchmark()
+    run_benchmark(args.num_blocks)

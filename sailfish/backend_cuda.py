@@ -204,7 +204,7 @@ class CUDABackend(object):
 
         return kern
 
-    def run_kernel(self, kernel, grid_size, stream=None):
+    def run_kernel(self, kernel, grid_size, stream=None, args=[]):
         kernel.prepared_async_call(_expand_grid(grid_size), kernel.block_shape,
                 stream, *kernel.args, shared_size=kernel.shared_size)
 

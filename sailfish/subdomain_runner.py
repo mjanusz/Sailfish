@@ -871,7 +871,7 @@ class BlockRunner(object):
         self._profile.record_gpu_start(TimeProfile.BULK, self._calc_stream)
         if self._boundary_blocks is not None:
             kernel, grid = self._get_bulk_kernel(output_req)
-            self.backend.run_kernel(kernel, grid, self._calc_stream)
+            self.backend.run_kernel(kernel, grid, self._calc_stream, [self._sim.iteration])
 
         self._apply_pbc(self._pbc_kernels)
         self._profile.record_gpu_end(TimeProfile.BULK, self._calc_stream)
@@ -894,7 +894,7 @@ class BlockRunner(object):
         blk_str = self._calc_stream
 
         self._profile.record_gpu_start(TimeProfile.BOUNDARY, blk_str)
-        self.backend.run_kernel(kernel, grid, blk_str)
+        self.backend.run_kernel(kernel, grid, blk_str, [self._sim.iteration])
         ev = self._profile.record_gpu_end(TimeProfile.BOUNDARY, blk_str)
 
         # Enqueue a wait so that the data collection will not start until the

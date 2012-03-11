@@ -16,7 +16,6 @@ def run_benchmark(num_blocks):
         'block_size': 128,
         'subdomains': num_blocks,
         'conn_axis': 'y',
-        'gpus': [0,2],
         'mode': 'benchmark',
         'lat_nx': 5118,
         'lat_ny': 5800 * num_blocks,

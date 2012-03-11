@@ -516,6 +516,10 @@ class BlockRunner(object):
 
         self._kernel_grid_bulk[0] /= bs
 
+        self.config.logger.info('Bulk grid: %s' % repr(self._kernel_grid_bulk))
+        self.config.logger.info('Boundary grid: %s' %
+                repr(self._boundary_blocks))
+
         # Special cases: boundary kernels can cover the whole domain or this is
         # the only block participating in the simulation.
         if (0 in self._kernel_grid_bulk or self._kernel_grid_bulk[0] < 0 or

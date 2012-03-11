@@ -268,6 +268,7 @@ class LBSimulationController(object):
 
         group = self._config_parser.add_group('Runtime mode settings')
         group.add_argument('--mode', help='runtime mode', type=str,
+            default='batch',
             choices=['batch', 'visualization', 'benchmark']),
         group.add_argument('--every',
             help='save/visualize simulation results every N iterations ',

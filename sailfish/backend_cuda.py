@@ -213,9 +213,9 @@ class CUDABackend(object):
                 nvcc=self.options.cuda_nvcc, keep=self.options.cuda_keep_temp,
                 cache_dir=cache) #options=['-Xopencc', '-O0']) #, options=['--use_fast_math'])
 
-    def get_kernel(self, prog, name, block, args, args_format, shared=None, fields=[]):
+    def get_kernel(self, prog, name, block, args, args_format, shared=None):
         kern = prog.get_function(name)
-        kern.prepare(args_format, shared, texrefs=[x for x in fields if x is not None])
+        kern.prepare(args_format, shared)
         setattr(kern, 'args', args)
         setattr(kern, 'block_shape', _expand_block(block))
 
@@ -229,9 +229,9 @@ class CUDABackend(object):
 
         return kern
 
-    def run_kernel(self, kernel, grid_size, stream=None):
+    def run_kernel(self, kernel, grid_size, stream=None, args=[]):
         kernel.prepared_async_call(_expand_grid(grid_size), kernel.block_shape,
-                stream, *kernel.args)
+                stream, *(kernel.args + args))
 
     def get_reduction_kernel(self, reduce_expr, map_expr, neutral, *args):
         """Generate and return reduction kernel; see PyCUDA documentation

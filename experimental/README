@@ -1,0 +1,5 @@
+This directory contains patches for the main code base that
+are currently not suitable for inclusion into the mainline
+branch.
+
+Be warned that some of the older patches might no longer apply.

@@ -1,0 +1,29 @@
+Changes the single fluid CollideAndPropagate kernel to make it use the
+propagate-on-read scheme.
+
+diff --git a/sailfish/templates/single_fluid.mako b/sailfish/templates/single_fluid.mako
+index 33c678c..d57ea3a 100644
+--- a/sailfish/templates/single_fluid.mako
++++ b/sailfish/templates/single_fluid.mako
+@@ -130,7 +130,11 @@ ${kernel} void CollideAndPropagate(
+ 
+ 	// Cache the distributions in local variables
+ 	Dist d0;
+-	getDist(&d0, dist_in, gi);
++	if (iteration == 0) {
++		getDist(&d0, dist_in, gi);
++	} else {
++		getUnpropagatedDist(&d0, dist_in, gi);
++	}
+ 
+ 	%if simtype == 'shan-chen':
+ 		${sc_calculate_accel()}
+@@ -159,7 +163,7 @@ ${kernel} void CollideAndPropagate(
+ 		%endif
+ 	}
+ 
+-	${propagate('dist_out', 'd0')}
++	${propagate_inplace('dist_out', 'd0')}
+ }
+ 
+ <%include file="util_kernels.mako"/>

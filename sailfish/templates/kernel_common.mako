@@ -79,25 +79,36 @@
 ## the boundary.
 <%def name="local_indices_bulk()">
 	lx = get_local_id(0);	// ID inside the current block
+	<%
+		if block.has_face_conn(block.X_LOW) or block.periodic_x:
+			xoff = block_size
+		else:
+			xoff = 0
+
+		if block.has_face_conn(block.Y_LOW) or block.periodic_y:
+			yoff = boundary_size
+		else:
+			yoff = 0
+	%>
 	%if dim == 2:
-		<%
-			if block.has_face_conn(block.X_LOW) or block.periodic_x:
-				xoff = block_size
-			else:
-				xoff = 0
-
-			if block.has_face_conn(block.Y_LOW) or block.periodic_y:
-				yoff = boundary_size
-			else:
-				yoff = 0
-		%>
-
 		gx = ${xoff} + get_global_id(0);
 		gy = ${yoff} + get_group_id(1);
 	%else:
-		gx = ${block_size} + get_global_id(0) % ${arr_nx - 2 * block_size};
-		gy = ${boundary_size} + get_global_id(0) / ${arr_nx - 2 * block_size};
-		gz = ${boundary_size} + get_global_id(1);
+		<%
+			if block.has_face_conn(block.Z_LOW) or block.periodic_z:
+				zoff = boundary_size
+			else:
+				zoff = 0
+
+			if block.has_face_conn(block.X_HIGH) or block.periodic_x:
+				xconns = xoff + block_size
+			else:
+				xconns = xoff
+		%>
+		## Also see how _kernel_grid_bulk is set in block_runnner.py
+		gx = ${xoff} + get_global_id(0) % ${arr_nx - xconns};
+		gy = ${yoff} + get_global_id(0) / ${arr_nx - xconns};
+		gz = ${zoff} + get_global_id(1);
 	%endif
 
 	gi = ${get_global_idx()};

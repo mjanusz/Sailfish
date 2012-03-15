@@ -176,6 +176,7 @@
 		<%
 			has_zlow = int(block.has_face_conn(block.Z_LOW) or block.periodic_z)
 			has_zhigh = int(block.has_face_conn(block.Z_HIGH) or block.periodic_z)
+			z_conns = has_zlow + has_zhigh
 
 			xblocks = arr_nx / block_size
 			yblocks = arr_ny - y_conns * boundary_size

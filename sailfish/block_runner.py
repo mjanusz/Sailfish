@@ -491,7 +491,11 @@ class BlockRunner(object):
                 z_conns += 1
 
         # Number of blocks to be handled by the boundary kernel.  This is also
-        # the grid size for boundary kernels.
+        # the grid size for boundary kernels.  Note that the number of X-connection
+        # blocks does not have the 'bns' factor to account for the thickness of
+        # the boundary layer, as the X connection is handled by whole compute
+        # device blocks which are assumed to be larger than the boundary layer
+        # (i.e. bs > bns).
         if block.dim == 2:
             self._boundary_blocks = (
                     (bns * arr_nx / bs) * y_conns +      # top & bottom
@@ -500,8 +504,8 @@ class BlockRunner(object):
             self._kernel_grid_full = [arr_nx / bs, arr_ny]
         else:
             self._boundary_blocks = (
-                    arr_nx * arr_ny * bns / bs * z_conns +              # T/B faces
-                    arr_nx * (arr_nz - z_conns * bns) / bs * y_conns +  # N/S faces
+                    arr_nx * arr_ny * bns / bs * z_conns +                    # T/B faces
+                    arr_nx * (arr_nz - z_conns * bns) / bs * bns * y_conns +  # N/S faces
                     (arr_ny - y_conns * bns) * (arr_nz - z_conns * bns) * x_conns)
             self._kernel_grid_bulk = [
                     (arr_nx - x_conns * bs) * (arr_ny - y_conns * bns),

@@ -163,25 +163,25 @@ class TimeProfile(object):
 
 
         min_ti = util.TimingInfo(
-                comp=(self._min_timings[self.BULK] + self._min_timings[self.BOUNDARY]) / mi,
-                bulk=self._min_timings[self.BULK] / mi,
-                bnd =self._min_timings[self.BOUNDARY] / mi,
-                coll=self._min_timings[self.COLLECTION] / mi,
-                net_wait=self._min_timings[self.NET_RECV] / mi,
-                recv=self._min_timings[self.RECV_DISTS] / mi,
-                send=self._min_timings[self.SEND_DISTS] / mi,
-                total=self._min_timings[self.STEP] / mi,
+                comp=(self._min_timings[self.BULK] + self._min_timings[self.BOUNDARY]),
+                bulk=self._min_timings[self.BULK],
+                bnd =self._min_timings[self.BOUNDARY],
+                coll=self._min_timings[self.COLLECTION],
+                net_wait=self._min_timings[self.NET_RECV],
+                recv=self._min_timings[self.RECV_DISTS],
+                send=self._min_timings[self.SEND_DISTS],
+                total=self._min_timings[self.STEP],
                 block_id=self._runner._block.id)
 
         max_ti = util.TimingInfo(
-                comp=(self._max_timings[self.BULK] + self._max_timings[self.BOUNDARY]) / mi,
-                bulk=self._max_timings[self.BULK] / mi,
-                bnd =self._max_timings[self.BOUNDARY] / mi,
-                coll=self._max_timings[self.COLLECTION] / mi,
-                net_wait=self._max_timings[self.NET_RECV] / mi,
-                recv=self._max_timings[self.RECV_DISTS] / mi,
-                send=self._max_timings[self.SEND_DISTS] / mi,
-                total=self._max_timings[self.STEP] / mi,
+                comp=(self._max_timings[self.BULK] + self._max_timings[self.BOUNDARY]),
+                bulk=self._max_timings[self.BULK],
+                bnd =self._max_timings[self.BOUNDARY],
+                coll=self._max_timings[self.COLLECTION],
+                net_wait=self._max_timings[self.NET_RECV],
+                recv=self._max_timings[self.RECV_DISTS],
+                send=self._max_timings[self.SEND_DISTS],
+                total=self._max_timings[self.STEP],
                 block_id=self._runner._block.id)
 
         self._runner.send_summary_info(ti, min_ti, max_ti)

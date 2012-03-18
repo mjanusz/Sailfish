@@ -73,25 +73,39 @@
 ## the boundary.
 <%def name="local_indices_bulk()">
 	lx = get_local_id(0);	// ID inside the current block
+	<%
+		if block.has_face_conn(block.X_LOW) or block.periodic_x:
+			xoff = block_size
+		else:
+			xoff = 0
+
+		if block.has_face_conn(block.Y_LOW) or block.periodic_y:
+			yoff = boundary_size
+		else:
+			yoff = 0
+	%>
 	%if dim == 2:
-		<%
-			if block.has_face_conn(block.X_LOW) or block.periodic_x:
-				xoff = block_size
-			else:
-				xoff = 0
-
-			if block.has_face_conn(block.Y_LOW) or block.periodic_y:
-				yoff = boundary_size
-			else:
-				yoff = 0
-		%>
-
 		gx = ${xoff} + get_global_id(0);
 		gy = ${yoff} + get_group_id(1);
 	%else:
-		gx = ${block_size} + get_global_id(0) % ${arr_nx - 2 * block_size};
-		gy = ${boundary_size} + get_global_id(0) / ${arr_nx - 2 * block_size};
-		gz = ${boundary_size} + get_global_id(1);
+		<%
+			if block.has_face_conn(block.Z_LOW) or block.periodic_z:
+				zoff = boundary_size
+			else:
+				zoff = 0
+
+			if block.has_face_conn(block.X_HIGH) or block.periodic_x:
+				xconns = xoff + block_size
+				padding = arr_nx - lat_nx
+				if block_size - padding >= boundary_size:
+					xconns += block_size
+			else:
+				xconns = xoff
+		%>
+		## Also see how _kernel_grid_bulk is set in block_runnner.py
+		gx = ${xoff} + get_global_id(0) % ${arr_nx - xconns};
+		gy = ${yoff} + get_global_id(0) / ${arr_nx - xconns};
+		gz = ${zoff} + get_global_id(1);
 	%endif
 
 	gi = ${get_global_idx()};
@@ -170,6 +184,7 @@
 		<%
 			has_zlow = int(block.has_face_conn(block.Z_LOW) or block.periodic_z)
 			has_zhigh = int(block.has_face_conn(block.Z_HIGH) or block.periodic_z)
+			z_conns = has_zlow + has_zhigh
 
 			xblocks = arr_nx / block_size
 			yblocks = arr_ny - y_conns * boundary_size
@@ -215,7 +230,7 @@
 				gid -= ${zhigh_idx};
 				gx = (gid % ${xblocks}) * ${block_size} + lx;
 				gid = gid / ${xblocks};
-				gz = gid % ${zblocks};
+				gz = gid % ${zblocks} + ${has_zlow * boundary_size};
 				gy = gid / ${zblocks};
 			}
 		%endif
@@ -225,12 +240,12 @@
 				gid -= ${ylow_idx};
 				gx = (gid % ${xblocks}) * ${block_size} + lx;
 				gid = gid / ${xblocks};
-				gz = gid % ${zblocks};
+				gz = gid % ${zblocks} + ${has_zlow * boundary_size};
 				gy = ${arr_ny-1} - gid / ${zblocks};
 			}
 		%endif
 		%if block.has_face_conn(block.X_LOW) or block.periodic_x:
-			// E face.
+			// W face.
 			else if (gid < ${xlow_idx}) {
 				gid -= ${yhigh_idx};
 				gx = lx;
@@ -239,13 +254,13 @@
 			}
 		%endif
 		%if block.has_face_conn(block.X_HIGH) or block.periodic_x:
-			// W face (part 1)
+			// E face (part 1)
 			else if (gid < ${xhigh_idx}) {
 				gid -= ${xlow_idx};
 				gx = ${arr_nx - block_size} + lx;
 				gy = gid % ${yblocks} + ${has_ylow * boundary_size};
 				gz = gid / ${yblocks} + ${has_zlow * boundary_size};
-			// W face (part 2)
+			// E face (part 2)
 			} else if (gid < ${max_idx}) {
 				gid -= ${xhigh_idx};
 				gx = ${arr_nx - 2*block_size} + lx;

@@ -102,6 +102,9 @@
 
 			if block.has_face_conn(block.X_HIGH) or block.periodic_x:
 				xconns = xoff + block_size
+				padding = arr_nx - lat_nx
+				if block_size - padding >= boundary_size:
+					xconns += block_size
 			else:
 				xconns = xoff
 		%>

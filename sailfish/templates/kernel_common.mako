@@ -233,7 +233,7 @@
 				gid -= ${zhigh_idx};
 				gx = (gid % ${xblocks}) * ${block_size} + lx;
 				gid = gid / ${xblocks};
-				gz = gid % ${zblocks};
+				gz = gid % ${zblocks} + ${has_zlow * boundary_size};
 				gy = gid / ${zblocks};
 			}
 		%endif
@@ -243,12 +243,12 @@
 				gid -= ${ylow_idx};
 				gx = (gid % ${xblocks}) * ${block_size} + lx;
 				gid = gid / ${xblocks};
-				gz = gid % ${zblocks};
+				gz = gid % ${zblocks} + ${has_zlow * boundary_size};
 				gy = ${arr_ny-1} - gid / ${zblocks};
 			}
 		%endif
 		%if block.has_face_conn(block.X_LOW) or block.periodic_x:
-			// E face.
+			// W face.
 			else if (gid < ${xlow_idx}) {
 				gid -= ${yhigh_idx};
 				gx = lx;
@@ -257,13 +257,13 @@
 			}
 		%endif
 		%if block.has_face_conn(block.X_HIGH) or block.periodic_x:
-			// W face (part 1)
+			// E face (part 1)
 			else if (gid < ${xhigh_idx}) {
 				gid -= ${xlow_idx};
 				gx = ${arr_nx - block_size} + lx;
 				gy = gid % ${yblocks} + ${has_ylow * boundary_size};
 				gz = gid / ${yblocks} + ${has_zlow * boundary_size};
-			// W face (part 2)
+			// E face (part 2)
 			} else if (gid < ${max_idx}) {
 				gid -= ${xhigh_idx};
 				gx = ${arr_nx - 2*block_size} + lx;

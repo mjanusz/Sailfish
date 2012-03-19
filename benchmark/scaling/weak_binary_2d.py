@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from examples.sc_separation_2d import SeparationSCSim, SeparationDomain
+from examples.binary_fluid.sc_separation_2d import SeparationSCSim, SeparationDomain
 from sailfish.controller import LBSimulationController
 from sailfish.geo import EqualSubdomainsGeometry2D
 from benchmark.scaling import util

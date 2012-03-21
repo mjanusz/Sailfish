@@ -155,10 +155,8 @@ ${device_func} void MS_relaxate(Dist *fi, int node_type, float *iv0)
 </%def>
 
 
-<%def name="bgk_relaxation_preamble()">
-	%for i in range(0, len(grids)):
-		Dist feq${i};
-	%endfor
+<%def name="bgk_relaxation_preamble(i=0)">
+	Dist feq${i};
 
 	%for local_var in bgk_equilibrium_vars:
 		float ${cex(local_var.lhs)} = ${cex(local_var.rhs, vectors=True)};
@@ -178,10 +176,10 @@ ${device_func} void MS_relaxate(Dist *fi, int node_type, float *iv0)
 
 	%for i, eq in enumerate(bgk_equilibrium):
 		${fluid_velocity(i, equilibrium=True)};
+	%endfor
 
-		%for feq, idx in eq:
-			feq${i}.${idx} = ${cex(feq, vectors=True)};
-		%endfor
+	%for feq, idx in bgk_equilibrium[i]:
+		feq${i}.${idx} = ${cex(feq, vectors=True)};
 	%endfor
 
 	%if subgrid == 'les-smagorinsky':
@@ -424,5 +422,41 @@ ${device_func} inline void BGK_relaxate(${bgk_args_decl()},
 		if (isWetNode(type)) {
 			${_relaxate(bgk_args)}
 		}
+	%endif
+</%def>
+
+
+<%def name="_bgk_relaxate(grid_num)">
+{
+	${bgk_relaxation_preamble(grid_num)}
+
+	%for idx in grid.idx_name:
+		d0.${idx} += (feq${grid_num}.${idx} - d0.${idx}) / tau${grid_num};
+	%endfor
+
+	## Is there a force acting on the current grid?
+	%if sym.needs_accel(grid_num, forces, force_couplings):
+		${fluid_velocity(grid_num)};
+		${body_force(accel=False, need_vars_declaration=False, grid_id=grid_num)}
+
+		%if simtype == 'shan-chen':
+		{
+			float pref = ${sym.bgk_external_force_pref(grid_num=grid_num)};
+			%for val, idx in sym.bgk_external_force(grid, grid_num=grid_num):
+				d0.${idx} += ${cex(val, vectors=True)};
+			%endfor
+		}
+		%else:
+			XXX
+		%endif
+	%endif
+
+	${body_force(need_vars_declaration=False, grid_id=grid_num)}
+}
+</%def>
+
+<%def name="relaxate_sc(grid_num)">
+	%if relaxation_enabled:
+		${_bgk_relaxate(grid_num)}
 	%endif
 </%def>

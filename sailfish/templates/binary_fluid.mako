@@ -131,8 +131,13 @@ ${kernel} void PrepareMacroFields(
 	${global_ptr} float *dist2_in,
 	${global_ptr} float *orho,
 	${global_ptr} float *ophi,
+<<<<<<< HEAD
 	int options
 	${iteration_number_if_required()})
+=======
+	${kernel_args_1st_moment('ov')}
+	int options)
+>>>>>>> [tmp] Some changes to see if SC can be optimized.
 {
 	${local_indices_split()}
 
@@ -242,14 +247,63 @@ ${kernel} void PrepareMacroFields(
 				ophi[helper_idx] = out - (${bc_wall_grad_order*bc_wall_grad_phase});
 			}
 		%endif
+<<<<<<< HEAD
 	%else:	## shan-chen
+=======
+	%else:
+
+		%if simtype == 'shan-chen':
+			float total_dens = out / tau0;
+			float v[${dim}];
+			compute_1st_moment(&fi, v, 0, 1.0f/tau0);
+		%endif
+
+>>>>>>> [tmp] Some changes to see if SC can be optimized.
 		getDist(&fi, dist2_in, gi);
 		get0thMoment(&fi, type, orientation, &out);
 		ophi[gi] = out;
+
+		%if simtype == 'shan-chen':
+			total_dens += out / tau1;
+			compute_1st_moment(&fi, v, 1, 1.0f/tau1);
+			%for i in range(0, dim):
+				v[${i}] /= total_dens;
+			%endfor
+			ovx[gi] = v[0];
+			ovy[gi] = v[1];
+			%if dim == 3:
+				ovz[gi] = v[2];
+			%endif
+		%endif
 	%endif
 }
 
-${kernel} void CollideAndPropagate(
+<%def name="collide_common(grid_num, in_name, out_name)">
+	%if simtype == 'shan-chen':
+		${sc_calculate_accel2(grid_num)}
+	%endif
+	// cache the distributions in local variables
+	Dist d0;
+	getDist(&d0, ${in_name}, gi);
+	precollisionBoundaryConditions(&d0, ncode, type, orientation, &g${grid_num}m0, v);
+
+	#define rho g0m0
+	#define phi g1m0
+	#define iv0 v
+	#define ea0 sca
+	#define ea1 sca
+
+	${relaxate_sc(grid_num)}
+
+	// FIXME: In order for the half-way bounce back boundary condition to work, a layer of unused
+	// nodes currently has to be placed behind the wall layer.
+	postcollisionBoundaryConditions(&d0, ncode, type, orientation, &g${grid_num}m0, v, gi, ${out_name});
+
+	${propagate(out_name, 'd0')}
+</%def>
+
+
+${kernel} void CollideAndPropagateTNG(
 	${global_ptr} int *map,
 	${global_ptr} float *dist1_in,
 	${global_ptr} float *dist1_out,
@@ -386,9 +440,13 @@ ${kernel} void CollideAndPropagate(
 		}
 	}
 
-	${propagate('dist1_out', 'd0')}
-	${barrier()}
-	${propagate('dist2_out', 'd1')}
+	{
+		${collide_common(0, 'dist1_in', 'dist1_out')}
+	}
+
+	{
+		${collide_common(1, 'dist2_in', 'dist2_out')}
+	}
 }
 
 <%include file="util_kernels.mako"/>

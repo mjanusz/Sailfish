@@ -123,10 +123,10 @@ class LBBinaryFluidBase(LBSim):
         args2 = [gpu_map, gpu_dist1b, gpu_dist1a, gpu_dist2b, gpu_dist2a,
                 gpu_rho, gpu_phi] + gpu_v + [options]
 
-        macro_args1 = [gpu_map, gpu_dist1a, gpu_dist2a, gpu_rho, gpu_phi,
-                options]
-        macro_args2 = [gpu_map, gpu_dist1b, gpu_dist2b, gpu_rho, gpu_phi,
-                options]
+        macro_args1 = ([gpu_map, gpu_dist1a, gpu_dist2a, gpu_rho, gpu_phi] +
+                gpu_v + [options])
+        macro_args2 = ([gpu_map, gpu_dist1b, gpu_dist2b, gpu_rho, gpu_phi] +
+                gpu_v + [options])
 
         macro_kernels = [
             runner.get_kernel('PrepareMacroFields', macro_args1,

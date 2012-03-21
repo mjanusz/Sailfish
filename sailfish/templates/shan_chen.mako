@@ -37,6 +37,35 @@
 	}
 </%def>
 
+<%def name="sc_calculate_accel2(grid_num)">
+	float sca[${dim}];
+
+	if (!isWallNode(type)) {
+		%for grids, coupling_const in force_couplings.iteritems():
+			// Interaction between two components.
+			%if grids[0] != grids[1]:
+				%if grids[0] == grid_num:
+					%if dim == 2:
+						shan_chen_force2(gi, g${grids[0]}m0, gg${grids[1]}m0,
+							${coupling_const}, sca, gx, gy);
+					%else:
+						shan_chen_force2(gi, g${grids[0]}m0, gg${grids[1]}m0,
+							${coupling_const}, sca, gx, gy, gz);
+					%endif
+				%else:
+					%if dim == 2:
+						shan_chen_force2(gi, g${grids[1]}m0, gg${grids[0]}m0,
+							${coupling_const}, sca, gx, gy);
+					%else:
+						shan_chen_force2(gi, g${grids[1]}m0, gg${grids[0]}m0,
+							${coupling_const}, sca, gx, gy, gz);
+					%endif
+				%endif
+			%endif
+		%endfor
+	}
+</%def>
+
 <%def name="sc_macro_fields()">
 	// Calculates the density and velocity for the Shan-Chen coupled fields.
 	// Density and velocity become weighted averages of the values for invidual components.
@@ -66,6 +95,11 @@ ${device_func} inline float sc_ppot(${global_ptr} float *field, int gi)
 {
 	float lfield = field[gi];
 	return ${cex(sym.SHAN_CHEN_POTENTIALS[sc_potential]('lfield'))};
+}
+
+${device_func} inline float sc_ppot2(float field)
+{
+	return ${cex(sym.SHAN_CHEN_POTENTIALS[sc_potential]('field'))};
 }
 
 // Calculates the Shan-Chen force between a single fluid component (self-interaction).
@@ -185,5 +219,59 @@ float cc, float *a1, float *a2, int x, int y
 	%for i in range(0, dim):
 		a1[${i}] *= - t1 * cc;
 		a2[${i}] *= - t2 * cc;
+	%endfor
+}
+
+
+// f1 is the local field (on which the force is acting)
+// f2 is the non-local field (from which the force is calculated)
+${device_func} inline void shan_chen_force2(int i, float f1, ${global_ptr} float *f2,
+float cc, float *a1, int x, int y
+%if dim == 3:
+	, int z
+%endif
+)
+{
+	float t1;
+
+	%for i in range(0, dim):
+		a1[${i}] = 0.0f;
+	%endfor
+
+	%if block.envelope_size != 0:
+		int off;
+	%endif
+
+	int gi;		// global index
+
+	%for i, ve in enumerate(grid.basis):
+		%if ve.dot(ve) != 0.0:
+			// ${ve}
+			%if block.envelope_size == 0:
+				${get_field_loc(*ve)};
+			%else:
+				${get_field_off(*ve)}
+				gi = i + off;
+			%endif
+
+			t1 = sc_ppot2(f2[gi]);
+
+			%if ve[0] != 0:
+				a1[0] += t1 * ${ve[0] * grid.weights[i]};
+			%endif
+			%if ve[1] != 0:
+				a1[1] += t1 * ${ve[1] * grid.weights[i]};
+			%endif
+			%if dim == 3 and ve[2] != 0:
+				a1[2] += t1 * ${ve[2] * grid.weights[i]};
+			%endif
+		%endif
+	%endfor
+
+	// Local node -- no offset.
+	t1 = sc_ppot2(f1);
+
+	%for i in range(0, dim):
+		a1[${i}] *= - t1 * cc;
 	%endfor
 }

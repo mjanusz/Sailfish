@@ -132,7 +132,6 @@ ${kernel} void PrepareMacroFields(
 	${global_ptr} float *dist2_in,
 	${global_ptr} float *orho,
 	${global_ptr} float *ophi,
-	${kernel_args_1st_moment('ov')}
 	int options)
 {
 	${local_indices_split()}
@@ -234,58 +233,13 @@ ${kernel} void PrepareMacroFields(
 			}
 		%endif
 	%else:
-
-		%if simtype == 'shan-chen':
-			float total_dens = out / tau0;
-			float v[${dim}];
-			compute_1st_moment(&fi, v, 0, 1.0f/tau0);
-		%endif
-
 		getDist(&fi, dist2_in, gi);
 		get0thMoment(&fi, type, orientation, &out);
 		ophi[gi] = out;
-
-		%if simtype == 'shan-chen':
-			total_dens += out / tau1;
-			compute_1st_moment(&fi, v, 1, 1.0f/tau1);
-			%for i in range(0, dim):
-				v[${i}] /= total_dens;
-			%endfor
-			ovx[gi] = v[0];
-			ovy[gi] = v[1];
-			%if dim == 3:
-				ovz[gi] = v[2];
-			%endif
-		%endif
 	%endif
 }
 
-<%def name="collide_common(grid_num, in_name, out_name)">
-	%if simtype == 'shan-chen':
-		${sc_calculate_accel2(grid_num)}
-	%endif
-	// cache the distributions in local variables
-	Dist d0;
-	getDist(&d0, ${in_name}, gi);
-	precollisionBoundaryConditions(&d0, ncode, type, orientation, &g${grid_num}m0, v);
-
-	#define rho g0m0
-	#define phi g1m0
-	#define iv0 v
-	#define ea0 sca
-	#define ea1 sca
-
-	${relaxate_sc(grid_num)}
-
-	// FIXME: In order for the half-way bounce back boundary condition to work, a layer of unused
-	// nodes currently has to be placed behind the wall layer.
-	postcollisionBoundaryConditions(&d0, ncode, type, orientation, &g${grid_num}m0, v, gi, ${out_name});
-
-	${propagate(out_name, 'd0')}
-</%def>
-
-
-${kernel} void CollideAndPropagateTNG(
+${kernel} void CollideAndPropagate(
 	${global_ptr} int *map,
 	${global_ptr} float *dist1_in,
 	${global_ptr} float *dist1_out,
@@ -314,23 +268,116 @@ ${kernel} void CollideAndPropagateTNG(
 		return;
 
 	int orientation = decodeNodeOrientation(ncode);
-	// macroscopic quantities for the current cell
-	float g0m0, v[${dim}], g1m0;
-	g0m0 = gg0m0[gi];
-	g1m0 = gg1m0[gi];
-	v[0] = ovx[gi];
-	v[1] = ovy[gi];
-	%if dim == 3:
-		v[2] = ovz[gi];
+
+	%if bc_pressure == 'guo':
+		int orig_gi = gi;
+		if (isPressureNode(type)) {
+			switch (orientation) {
+				%for dir_ in grid.dir2vecidx.keys():
+					case (${dir_}): {
+						## TODO: add a function to calculate the local indices from gi
+						%if dim == 2:
+							gi += ${rel_offset(*(list(grid.dir_to_vec(dir_)) + [0]))};
+							gx += ${grid.dir_to_vec(dir_)[0]};
+							gy += ${grid.dir_to_vec(dir_)[1]};
+						%else:
+							gi += ${rel_offset(*(grid.dir_to_vec(dir_)))};
+							gx += ${grid.dir_to_vec(dir_)[0]};
+							gy += ${grid.dir_to_vec(dir_)[1]};
+							gz += ${grid.dir_to_vec(dir_)[2]};
+						%endif
+						break;
+					}
+				%endfor
+			}
+		}
 	%endif
 
-	{
-		${collide_common(0, 'dist1_in', 'dist1_out')}
+	%if simtype == 'free-energy':
+		float lap1, grad1[${dim}];
+
+		if (isWetNode(type)) {
+			%if dim == 2:
+				laplacian_and_grad(gg1m0, 1, gi, &lap1, grad1, gx, gy);
+			%else:
+				laplacian_and_grad(gg1m0, 1, gi, &lap1, grad1, gx, gy, gz);
+			%endif
+		}
+	%elif simtype == 'shan-chen':
+		${sc_calculate_accel()}
+	%endif
+
+	// cache the distributions in local variables
+	Dist d0, d1;
+	getDist(&d0, dist1_in, gi);
+	getDist(&d1, dist2_in, gi);
+
+	%if bc_pressure == 'guo':
+		if (isPressureNode(type)) {
+			gi = orig_gi;
+		}
+	%endif
+
+	// macroscopic quantities for the current cell
+	float g0m0, v[${dim}], g1m0;
+
+	%if simtype == 'free-energy':
+		getMacro(&d0, ncode, type, orientation, &g0m0, v);
+		// TODO(michalj): Is this really needed?
+		get0thMoment(&d1, type, orientation, &g1m0);
+	%elif simtype == 'shan-chen':
+		${sc_macro_fields()}
+	%endif
+
+	precollisionBoundaryConditions(&d0, ncode, type, orientation, &g0m0, v);
+	precollisionBoundaryConditions(&d1, ncode, type, orientation, &g1m0, v);
+
+	%if simtype == 'shan-chen':
+		${relaxate(bgk_args_sc)}
+	%elif simtype == 'free-energy':
+		${relaxate(bgk_args_fe)}
+	%endif
+
+	// FIXME: In order for the half-way bounce back boundary condition to work, a layer of unused
+	// nodes currently has to be placed behind the wall layer.
+	postcollisionBoundaryConditions(&d0, ncode, type, orientation, &g0m0, v, gi, dist1_out);
+	postcollisionBoundaryConditions(&d1, ncode, type, orientation, &g1m0, v, gi, dist2_out);
+
+	%if bc_pressure == 'guo':
+		if (isPressureNode(type)) {
+			switch (orientation) {
+				%for dir_ in grid.dir2vecidx.keys():
+					case (${dir_}): {
+						## TODO: add a function to calculate the local indices from gi
+						gx -= ${grid.dir_to_vec(dir_)[0]};
+						gy -= ${grid.dir_to_vec(dir_)[1]};
+						%if dim == 3:
+							gz -= ${grid.dir_to_vec(dir_)[2]};
+						%endif
+						break;
+					}
+				%endfor
+			}
+		}
+	%endif
+
+	// Only save the macroscopic quantities if requested to do so.
+	if (options & OPTION_SAVE_MACRO_FIELDS) {
+		%if simtype == 'shan-chen' and not bc_wall_.wet_nodes:
+			if (!isWallNode(type))
+		%endif
+		{
+			ovx[gi] = v[0];
+			ovy[gi] = v[1];
+			%if dim == 3:
+				ovz[gi] = v[2];
+			%endif
+		}
 	}
 
-	{
-		${collide_common(1, 'dist2_in', 'dist2_out')}
-	}
+	${propagate('dist1_out', 'd0')}
+	${barrier()}
+	${propagate('dist2_out', 'd1')}
 }
 
 <%include file="util_kernels.mako"/>

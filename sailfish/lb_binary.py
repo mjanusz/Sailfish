@@ -123,10 +123,10 @@ class LBBinaryFluidBase(LBSim):
         args2 = [gpu_map, gpu_dist1b, gpu_dist1a, gpu_dist2b, gpu_dist2a,
                 gpu_rho, gpu_phi] + gpu_v + [options]
 
-        macro_args1 = ([gpu_map, gpu_dist1a, gpu_dist2a, gpu_rho, gpu_phi] +
-                gpu_v + [options])
-        macro_args2 = ([gpu_map, gpu_dist1b, gpu_dist2b, gpu_rho, gpu_phi] +
-                gpu_v + [options])
+        macro_args1 = [gpu_map, gpu_dist1a, gpu_dist2a, gpu_rho, gpu_phi,
+                options]
+        macro_args2 = [gpu_map, gpu_dist1b, gpu_dist2b, gpu_rho, gpu_phi,
+                options]
 
         macro_kernels = [
             runner.get_kernel('PrepareMacroFields', macro_args1,
@@ -135,9 +135,9 @@ class LBBinaryFluidBase(LBSim):
                 'P' * (len(macro_args2) - 1) + 'i')]
 
         sim_kernels = [
-            runner.get_kernel('CollideAndPropagateTNG', args1,
+            runner.get_kernel('CollideAndPropagate', args1,
                 'P' * (len(args1) - 1) + 'i'),
-            runner.get_kernel('CollideAndPropagateTNG', args2,
+            runner.get_kernel('CollideAndPropagate', args2,
                 'P' * (len(args2) - 1) + 'i')]
         return zip(macro_kernels, sim_kernels)
 

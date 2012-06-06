@@ -104,7 +104,7 @@ class ZMQSubdomainConnector(object):
         return True
 
     @classmethod
-    def make_ipc_pair(self, ctype, sizes, ids):
+    def make_ipc_pair(self, ids):
         addr = 'ipc://%s/sailfish-master-%d_%d-%d' % (tempfile.gettempdir(),
                 os.getpid(), ids[0], ids[1])
         return (ZMQSubdomainConnector(addr, False), ZMQSubdomainConnector(addr, True))

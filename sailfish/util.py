@@ -21,6 +21,16 @@ class GridError(Exception):
     pass
 
 
+def lazy_property(fn):
+    attr_name = '__lazy_' + fn.__name__
+    @property
+    def _lazy_property(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+    return _lazy_property
+
+
 def get_grid_from_config(config):
     for x in sym.KNOWN_GRIDS:
         if x.__name__ == config.grid:
@@ -132,4 +142,18 @@ def in_anyd_fast(arr1, values):
 
 def is_number(param):
     return type(param) is float or type(param) is int or isinstance(param, np.number)
+
+def mand(a, *args):
+    """numpy's logical and across all arguments."""
+    ret = a
+    for arg in args:
+        ret = np.logical_and(ret, arg)
+    return ret
+
+def mor(a, *args):
+    """numpy's logical or across all arguments."""
+    ret = a
+    for arg in args:
+        ret = np.logical_or(ret, arg)
+    return ret
 

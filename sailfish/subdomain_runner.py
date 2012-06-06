@@ -229,6 +229,7 @@ def profile(profile_event):
         return decorate
     return _profile
 
+
 class SubdomainRunner(object):
     """Runs the simulation for a single Subdomain.
 
@@ -733,7 +734,7 @@ class SubdomainRunner(object):
         """Creates buffers for inter-block communication."""
         alloc = self.backend.alloc_async_host_buf
 
-        # Maps block ID to a list of ConnectionBuffer objects.  The list will
+        # Maps subdomain ID to a list of ConnectionBuffer objects.  The list will
         # typically contain just 1 element, unless periodic boundary conditions
         # are used.
         self._block_to_connbuf = defaultdict(list)
@@ -1206,12 +1207,54 @@ class SubdomainRunner(object):
         self._sim.initial_conditions(self)
         self._sim.verify_fields()
 
+    def _send_wet_map(self):
+        """Sends wet node maps to remote subdomains."""
+        subd_spec = self._block
+
+        for face, subdomain_id in subd_spec.connecting_subdomains():
+            cpairs = self._block.get_connections(face, subdomain_id)
+            connector = self._block._connectors[subdomain_id]
+            for cpair in cpairs:
+                wet_map = self._subdomain.interface_wet_map(face, cpair.src)
+                connector.send(wet_map)
+                cpair.src.src_wet_map = wet_map
+
+    def _recv_wet_map(self):
+        """Receives wet node maps from remote subdomains."""
+        subd_spec = self._block
+
+        for face, subdomain_id in subd_spec.connecting_subdomains():
+            cpairs = self._block.get_connections(face, subdomain_id)
+            connector = self._block._connectors[subdomain_id]
+            for cpair in cpairs:
+                wet_map = np.zeros(cpair.dst.nodes, dtype=np.bool)
+                if not connector.recv(wet_map, self._quit_event):
+                    return
+
+                cpair.dst.src_wet_map = wet_map
+
+    def _optimize_subdomain_connections(self):
+        """Identifies wet nodes in the subdomain interface.
+
+        This is used to limit the data sent and received from remote
+        subdomains. Dry nodes in the source subdomain will not propagate
+        any information into the destination subdomain, and such can be
+        skipped in data collection. Note that dry nodes will still receive
+        data from the other subdomain if they are adjacent to wet nodes.
+        """
+        if not self.config.ignore_dry_nodes_in_subdomain_transfers:
+            return
+
+        self._send_wet_map()
+        self._recv_wet_map()
+
     def run(self):
         self.config.logger.info("Initializing block.")
         self.config.logger.debug(self.backend.info)
 
         self._init_geometry()
         self._sim.init_fields(self)
+        self._optimize_subdomain_connections()
         self._init_buffers()
         self._init_compute()
         self.config.logger.debug("Initializing macroscopic fields.")
@@ -1289,7 +1332,6 @@ class SubdomainRunner(object):
             self._output.save(self._sim.iteration)
 
         self._profile.record_end()
-
 
 class NNSubdomainRunner(SubdomainRunner):
     """Runs a fluid simulation for a single subdomain.
@@ -1629,3 +1671,8 @@ class NNSubdomainRunner(SubdomainRunner):
 
         return True
 
+
+# TODO(michalj): Rename the classes and get rid of these
+# aliases.
+SubdomainRunner = BlockRunner
+NNSubdomainRunner = NNBlockRunner

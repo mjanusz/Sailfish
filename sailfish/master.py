@@ -172,8 +172,7 @@ class LBMachineMaster(object):
                             subdomain.id, nbid, size1, size2, face_str))
 
                 if nbid in local_subdomain_ids:
-                    c1, c2 = ZMQSubdomainConnector.make_ipc_pair(ctype, (size1, size2),
-                                                             (subdomain.id, nbid))
+                    c1, c2 = ZMQSubdomainConnector.make_ipc_pair((subdomain.id, nbid))
                     subdomain.add_connector(nbid, c1)
                     ipc_files.append(c1.ipc_file)
                     local_subdomain_map[nbid].add_connector(subdomain.id, c2)

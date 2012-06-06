@@ -324,6 +324,9 @@ class LBSimulationController(object):
         group.add_argument('--cluster_pbs_interface', type=str,
                 default='', help='Network interface to use on PBS nodes for '
                 'internode communication.')
+        group.add_argument('--ignore_dry_nodes_in_subdomain_transfers',
+                type=bool, default=True, help='If True, subdomain-subdomain '
+                'data transfers will not include data for dry nodes')
 
         group = self._config_parser.add_group('Simulation-specific settings')
         lb_class.add_options(group, self.dim)

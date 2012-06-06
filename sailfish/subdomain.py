@@ -9,6 +9,7 @@ import inspect
 import operator
 import numpy as np
 from sailfish import sym, util
+from sailfish.util import lazy_property
 import sailfish.node_type as nt
 
 def span_area(span):
@@ -29,6 +30,109 @@ ConnectionPair = namedtuple('ConnectionPair', 'src dst')
 SubdomainPair = namedtuple('SubdomainPair', 'real virtual')
 
 
+def _expand_slice(slice, face, spec, global_space=False):
+    """
+    Expands a 1/2-D slice to a 2/3-D slice.
+
+    :param slice: slice in the space ortogonal to the connection axis
+            identified by `face`, natural axis order
+    :param face: face ID
+    :param spec: SubdomainSpec for which the slice is to be generated
+    :param global_space: if True, extends the slice with a coordinate in the
+            _global_ domain space.
+    """
+    ss = SubdomainSpec
+    slice = slice[:]    # make a copy
+    dx = 0 if not global_space else spec.location[spec.face_to_axis(face)]
+
+    if face == ss.X_LOW:
+        t = [dx]
+        t.extend(slice)
+        slice = t
+    elif face == ss.X_HIGH:
+        t = [dx + spec.nx - 1]
+        t.extend(slice)
+        slice = t
+    elif face == ss.Y_LOW:
+        if self.dim == 2:
+            slice = [slice[0], dx]
+        else:
+            slice = [slice[0], dx, slice[1]]
+    elif face == ss.Y_HIGH:
+        if self.dim == 2:
+            slice = [slice[0], dx + spec.ny - 1]
+        else:
+            slice = [slice[0], dx + spec.ny - 1, slice[1]]
+    elif face == ss.Z_LOW:
+        slice.append(dx)
+    elif face == ss.Z_HIGH:
+        slice.append(dx + spec.nz - 1)
+    else:
+        raise ValueError('Invalid face ID: {0}'.format(face))
+
+    return slice
+
+
+class NodeSlice(object):
+    """A slice in the global domain space."""
+
+    def __init__(self, face, spec, slice):
+        self._face = face
+        self._slice = slice
+        self._spec = spec
+
+        conn_axis = spec.face_to_axis(face)
+        self._slice_axes = range(0, spec.dim)
+        self._slice_axes.remove(conn_axis)
+
+    @lazy_property
+    def global_(self):
+        """Slice in the full domain space (real nodes only).
+
+        Axes are in natural order.
+        """
+        return _expand_slice(self._slice, self._face, self._spec, True)
+
+    @lazy_property
+    def local(self):
+        """Slice in the local subdomain space, including real nodes only.
+
+        The slices are in the natural axis order.
+        """
+        slc = []
+        for i, axis in enumerate(self._slice_axes):
+            local_start = self._spec.location[axis]
+            slc.append(slice(max(0, self._slice[i].start - local_start),
+                             min(self._spec.end_location[axis],
+                                 self._slice[i].stop - local_start)))
+        return slc
+
+    @lazy_property
+    def local_full(self):
+        """The slices are in the memory layout axis order."""
+        return list(reversed(
+            _expand_slice(self.local, self._face, self._spec)))
+
+    @lazy_property
+    def local_ghost(self):
+        """Slice in the local subdomain space, including ghost nodes.
+
+        The slices are in the natural axis order.
+        """
+        slc = []
+        for i, axis in enumerate(self._slice_axes):
+            ghost_start = self._spec.location[axis] - self._spec.envelope_size
+            slc.append(slice(self._slice[i].start - ghost_start,
+                             self._slice[i].stop - ghost_start))
+        return slc
+
+    @lazy_property
+    def local_ghost_full(self):
+        """The slices are in the memory layout axis order."""
+        return list(reversed(
+            _expand_slice(self.local_ghost, self._face, self._spec)))
+
+
 def _get_src_slice(b1, b2, slice_axes):
     """Returns slice lists identifying nodes in b1 from which
     information is sent to b2:
@@ -43,9 +147,10 @@ def _get_src_slice(b1, b2, slice_axes):
     The returned slices correspond to the axes specified in slice_axes.
 
     :param b1: source SubdomainSpec
-    :parma b2: target SubdomainSpec
+    :param b2: target SubdomainSpec
     :param slice_axes: list of axis numbers identifying axes spanning
-        the area of nodes sending information to the target node
+        the area of nodes sending information to the target node; the axes
+        are in the natural order (0, 1, 2)
     """
     src_slice = []
     src_slice_global = []
@@ -240,16 +345,22 @@ class LBConnection(object):
         if not dst_slice and not dst_partial_map:
             return None
 
-        return LBConnection(dists, src_slice, dst_low, dst_slice, dst_full_buf_slice,
+        src_node_slice = NodeSlice(face, b1, src_slice_global)
+
+        return LBConnection(dists, src_node_slice, dst_low, dst_slice, dst_full_buf_slice,
                 dst_partial_map, src_macro_slice, dst_macro_slice, b1.id)
 
-    def __init__(self, dists, src_slice, dst_low, dst_slice, dst_full_buf_slice,
+    @property
+    def src_slice(self):
+        return self.src_node_slice.local_ghost
+
+    def __init__(self, dists, src_node_slice, dst_low, dst_slice, dst_full_buf_slice,
             dst_partial_map, src_macro_slice, dst_macro_slice, src_id):
         """
         In 3D, the order of all slices always follows the natural ordering: x, y, z
 
         :param dists: indices of distributions to be transferred
-        :param src_slice: slice in the full buffer of the source block,
+        :param src_node_slice: NodeSlice for the source block
         :param dst_low: position of the buffer in the non-ghost coordinate system of
             the dest block
         :param dst_slice: slice in the non-ghost buffer of the dest block, to which
@@ -267,7 +378,7 @@ class LBConnection(object):
         :param src_id: ID of the source block
         """
         self.dists = dists
-        self.src_slice = src_slice
+        self.src_node_slice = src_node_slice
         self.dst_low = dst_low
         self.dst_slice = dst_slice
         self.dst_full_buf_slice = dst_full_buf_slice
@@ -275,6 +386,7 @@ class LBConnection(object):
         self.src_macro_slice = src_macro_slice
         self.dst_macro_slice = dst_macro_slice
         self.block_id = src_id
+        self.src_wet_map = None
 
     def __eq__(self, other):
         return ((self.dists == other.dists) and
@@ -291,6 +403,11 @@ class LBConnection(object):
     def elements(self):
         """Size of the connection buffer in elements."""
         return len(self.dists) * span_area(self.src_slice)
+
+    @property
+    def nodes(self):
+        """Size of the connection buffer in nodes."""
+        return span_area(self.src_slice)
 
     @property
     def transfer_shape(self):
@@ -747,6 +864,17 @@ class Subdomain(object):
         ctx['y_local_device_to_global_offset'] = self.spec.oy - self.spec.envelope_size
         if self.dim == 3:
             ctx['z_local_device_to_global_offset'] = self.spec.oz - self.spec.envelope_size
+
+    def interface_wet_map(self, face, connection):
+        """
+        :param connection: LBConnection object; src represents self
+        """
+        assert not self._type_map_encoded
+        assert connection.block_id == self.spec.id
+
+        wet_types = self._type_map.dtype.type(nt.get_wet_node_type_ids())
+        return util.in_anyd(self._type_map[connection.src_node_slice.local_full],
+                wet_types)
 
     def encoded_map(self):
         if not self._type_map_encoded:

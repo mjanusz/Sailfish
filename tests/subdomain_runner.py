@@ -8,16 +8,54 @@ import zmq
 from sailfish.config import LBConfig
 from sailfish.connector import ZMQSubdomainConnector
 from sailfish.lb_base import LBSim
+from sailfish.lb_single import LBFluidSim
 from sailfish.lb_binary import LBBinaryFluidShanChen
 from sailfish.backend_dummy import DummyBackend
 from sailfish.subdomain_runner import SubdomainRunner, NNSubdomainRunner
-from sailfish.subdomain import SubdomainSpec2D, SubdomainSpec3D, SubdomainPair
+from sailfish.subdomain import SubdomainSpec2D, SubdomainSpec3D, Subdomain3D
 from sailfish.io import LBOutput
-from sailfish.sym import D2Q9
-
+from sailfish.sym import D2Q9, D3Q19
+from sailfish.node_type import NTFullBBWall
+from sailfish.util import mor, mand
 from dummy import *
 
-class BasicFunctionalityTest(unittest.TestCase):
+class SubdomainRunnerTestCase(unittest.TestCase):
+    def setUp(self):
+        config = LBConfig()
+        config.precision = 'single'
+        config.block_size = 8
+        config.logger = DummyLogger()
+        config.bulk_boundary_split = False
+        config.output = ''
+        config.grid = 'D2Q9'
+        self.config = config
+        self.backend = DummyBackend()
+        self.ctx = zmq.Context()
+
+    def _connect_subdomains(self, ss1, ss2, grid):
+        """
+        :param ss1: SubdomainSpec
+        :param ss2: SubdomainSpec
+        :param grid: a DxQy-class object
+        """
+        # Establish connection between ss1 and ss2..
+        self.assertTrue(ss1.connect(ss2, grid=grid))
+        cpair = ss1.get_connection(*ss1.connecting_subdomains()[0])
+        c1, c2 = ZMQSubdomainConnector.make_ipc_pair((ss1.id, ss2.id))
+        ss1.add_connector(ss2.id, c1)
+        ss2.add_connector(ss1.id, c2)
+        return c1, c2
+
+
+class TestDomain(Subdomain3D):
+    def boundary_conditions(self, hx, hy, hz):
+        self.set_node(mand(hx > 10, hy > 10), NTFullBBWall)
+
+class TestFluidSim(LBFluidSim):
+    subdomain = TestDomain
+
+
+class BasicFunctionalityTest(SubdomainRunnerTestCase):
     location = 0, 0
     size = 10, 3
 
@@ -25,15 +63,10 @@ class BasicFunctionalityTest(unittest.TestCase):
     size_3d = 3, 5, 7
 
     def setUp(self):
-        config = LBConfig()
-        config.precision = 'single'
-        config.block_size = 8
-        # Does not affect behaviour of any of the functions tested here.
-        config.lat_nz, config.lat_nx, config.lat_ny = self.size_3d
-        config.logger = DummyLogger()
-        config.grid = 'D3Q19'
-        self.sim = LBSim(config)
-        self.backend = DummyBackend()
+        super(BasicFunctionalityTest, self).setUp()
+        self.config.lat_nz, self.config.lat_nx, self.config.lat_ny = self.size_3d
+        self.config.grid = 'D3Q19'
+        self.sim = LBSim(self.config)
 
     def get_subdomain_runner(self, block):
         return SubdomainRunner(self.sim, block, output=None,
@@ -73,21 +106,42 @@ class BasicFunctionalityTest(unittest.TestCase):
         nodes = runner._get_nodes()
         self.assertEqual(nodes, reduce(operator.mul, real_size))
 
+    def test_wet_map_interchange(self):
+        """Verifies that the maps of wet nodes on the interface between
+        subdomains are correctly exchanged between two subdomain runners."""
+        ss1 = SubdomainSpec3D((0, 0, 0), (20, 20, 20), envelope_size=1, id_=0)
+        ss2 = SubdomainSpec3D((0, 0, 20), (20, 20, 20), envelope_size=1, id_=1)
 
-class NNSubdomainRunnerTest(unittest.TestCase):
+        c1, c2 = self._connect_subdomains(ss1, ss2, D3Q19)
+
+        # Create simulation object and block runnners.
+        sim1 = TestFluidSim(self.config)
+        sim2 = TestFluidSim(self.config)
+        sr1 = SubdomainRunner(sim1, ss1, output=LBOutput(self.config, ss1.id),
+                backend=self.backend, quit_event=DummyEvent())
+        sr2 = SubdomainRunner(sim2, ss2, output=LBOutput(self.config, ss2.id),
+                backend=self.backend, quit_event=DummyEvent())
+
+        # Initialize a local IPC connection between the subdomains.
+        c1.init_runner(self.ctx)
+        c2.init_runner(self.ctx)
+
+        sr1._init_geometry()
+        sr2._init_geometry()
+
+        sr1._send_wet_map()
+        sr2._send_wet_map()
+        sr1._recv_wet_map()
+        sr2._recv_wet_map()
+
+        os.unlink(c1.ipc_file)
+
+class NNSubdomainRunnerTest(SubdomainRunnerTestCase):
 
     def setUp(self):
-        config = LBConfig()
-        config.precision = 'single'
-        config.block_size = 8
-        config.lat_nx, config.lat_ny = 40, 80
-        config.logger = DummyLogger()
-        config.grid = 'D2Q9'
-        config.bulk_boundary_split = False
-        config.output = ''
-        self.config = config
-        self.backend = DummyBackend()
-        self.ctx = zmq.Context()
+        super(NNSubdomainRunnerTest, self).setUp()
+        self.config.lat_nx, self.config.lat_ny = 40, 80
+        self.config.grid = 'D2Q9'
 
     def tearDown(self):
         try:
@@ -104,15 +158,7 @@ class NNSubdomainRunnerTest(unittest.TestCase):
         b1.set_actual_size(envelope_size=1)
         b2.set_actual_size(envelope_size=1)
 
-        # Establish connection between the two blocks.
-        self.assertTrue(b1.connect(b2, grid=D2Q9))
-
-        cpair = b1.get_connection(*b1.connecting_subdomains()[0])
-        size1 = cpair.src.elements
-        size2 = cpair.dst.elements
-        c1, c2 = ZMQSubdomainConnector.make_ipc_pair(ctypes.c_float, (size1, size2), (b1.id, b2.id))
-        b1.add_connector(b2.id, c1)
-        b2.add_connector(b1.id, c2)
+        c1, c2 = self._connect_subdomains(b1, b2, D2Q9)
 
         # Create simulation object and block runnners.
         sim1 = LBBinaryFluidShanChen(self.config)

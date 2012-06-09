@@ -1,4 +1,6 @@
-Small to medium tests verifying specific functionality.
+Small to medium tests verifying specific functionality.  These tests should:
+- finish within a few seconds,
+- test specific functionality, as opposed to end-to-end correctness of results.
 
 Tests that require the presence of a GPU should be located in the gpu/
 subdirectory.

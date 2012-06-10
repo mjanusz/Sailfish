@@ -31,8 +31,7 @@ class TestBlock3D(unittest.TestCase):
         self.assertEqual(cpair.src.src_slice, [slice(1, 11), slice(1, 13)])
         self.assertEqual(cpair.src.src_macro_slice, [slice(1, 11), slice(1, 13)])
         self.assertEqual(cpair.src.dst_macro_slice, [slice(1, 11), slice(1, 13)])
-        self.assertEqual(cpair.src.dst_low, [0,0])
-        self.assertEqual(cpair.src.dst_slice, [slice(1, 9), slice(1, 11)])
+        self.assertEqual(cpair.src.dst_slice.local, [slice(1, 9), slice(1, 11)])
         self.assertEqual(cpair.src.dst_full_buf_slice, [slice(1, 9), slice(1, 11)])
 
         # Order of axes in the connection buffer is: x, z
@@ -560,42 +559,34 @@ class TestBlock2D(unittest.TestCase):
         cpair = base.get_connection(SubdomainSpec2D.X_HIGH, b6.id)
         self.assertEqual(cpair.src.src_slice, [slice(0, 1)])
         self.assertEqual(cpair.src.src_macro_slice, [slice(1, 2)])
-        self.assertEqual(cpair.src.dst_low, [4])
-        self.assertEqual(cpair.src.dst_slice, [])
-        self.assertEqual(cpair.src.dst_full_buf_slice, [])
+        self.assertEqual(cpair.src.dst_slice, None)
         expected_map = {
-                vi(1,-1): np.array([[0]])}
+                vi(1,-1): np.array([[1, 5]])}
         _verify_partial_map(self, cpair.src, expected_map)
 
         self.assertEqual(cpair.dst.src_slice, [slice(6, 7)])
         self.assertEqual(cpair.dst.src_macro_slice, [slice(5, 6)])
-        self.assertEqual(cpair.dst.dst_low, [0])
-        self.assertEqual(cpair.dst.dst_slice, [])
-        self.assertEqual(cpair.dst.dst_full_buf_slice, [])
+        self.assertEqual(cpair.dst.dst_slice, None)
         expected_map = {
-                vi(-1,1): np.array([[0]])}
+                vi(-1,1): np.array([[10, 1]])}
         _verify_partial_map(self, cpair.dst, expected_map)
 
-        # corner match (high)
+        # corner match (high
         b7 = SubdomainSpec2D((20, 20), (5, 5), envelope_size=1, id_=7)
         self.assertTrue(base.connect(b7, grid=D2Q9))
         cpair = base.get_connection(SubdomainSpec2D.X_HIGH, b7.id)
         self.assertEqual(cpair.src.src_slice, [slice(11, 12)])
         self.assertEqual(cpair.src.src_macro_slice, [slice(10, 11)])
-        self.assertEqual(cpair.src.dst_low, [0])
-        self.assertEqual(cpair.src.dst_slice, [])
-        self.assertEqual(cpair.src.dst_full_buf_slice, [])
+        self.assertEqual(cpair.src.dst_slice, None)
         expected_map = {
-                vi(1,1): np.array([[0]])}
+                vi(1,1): np.array([[1, 1]])}
         _verify_partial_map(self, cpair.src, expected_map)
 
         self.assertEqual(cpair.dst.src_slice, [slice(0, 1)])
         self.assertEqual(cpair.dst.src_macro_slice, [slice(1, 2)])
-        self.assertEqual(cpair.dst.dst_low, [9])
-        self.assertEqual(cpair.dst.dst_slice, [])
-        self.assertEqual(cpair.dst.dst_full_buf_slice, [])
+        self.assertEqual(cpair.dst.dst_slice, None)
         expected_map = {
-                vi(-1,-1): np.array([[0]])}
+                vi(-1,-1): np.array([[10, 10]])}
         _verify_partial_map(self, cpair.dst, expected_map)
 
 

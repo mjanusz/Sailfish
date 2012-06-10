@@ -113,7 +113,7 @@ class TestNodeTypeSetting3D(unittest.TestCase):
         connection = LBConnection.make(sub.spec, other, face, D3Q19)
         wet_map = sub.interface_wet_map(face, connection)
         self.assertEqual(np.sum(wet_map == True), 22 * 8)
-        exp_map = np.zeros((16, 22), dtype=np.bool)
+        exp_map = np.zeros((16, 22, 1), dtype=np.bool)
         exp_map[:8,:] = True
         np.testing.assert_array_equal(exp_map, wet_map)
 
@@ -125,19 +125,19 @@ class TestUtilFunctions(unittest.TestCase):
         slc = [slice(10, 14), slice(18, 35)]
 
         self.assertEqual(subdomain._expand_slice(slc, ss.X_HIGH, ss),
-                [63, slice(10, 14), slice(18, 35)])
+                [slice(63, 64), slice(10, 14), slice(18, 35)])
         self.assertEqual(subdomain._expand_slice(slc, ss.X_HIGH, ss, True),
-                [66, slice(10, 14), slice(18, 35)])
+                [slice(66, 67), slice(10, 14), slice(18, 35)])
 
         self.assertEqual(subdomain._expand_slice(slc, ss.X_LOW, ss),
-                [0, slice(10, 14), slice(18, 35)])
+                [slice(0, 1), slice(10, 14), slice(18, 35)])
         self.assertEqual(subdomain._expand_slice(slc, ss.X_LOW, ss, True),
-                [3, slice(10, 14), slice(18, 35)])
+                [slice(3, 4), slice(10, 14), slice(18, 35)])
 
         self.assertEqual(subdomain._expand_slice(slc, ss.Z_HIGH, ss),
-                [slice(10, 14), slice(18, 35), 255])
+                [slice(10, 14), slice(18, 35), slice(255, 256)])
         self.assertEqual(subdomain._expand_slice(slc, ss.Z_HIGH, ss, True),
-                [slice(10, 14), slice(18, 35), 265])
+                [slice(10, 14), slice(18, 35), slice(265, 266)])
 
 if __name__ == '__main__':
     unittest.main()

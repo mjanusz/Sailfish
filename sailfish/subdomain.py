@@ -30,60 +30,83 @@ ConnectionPair = namedtuple('ConnectionPair', 'src dst')
 SubdomainPair = namedtuple('SubdomainPair', 'real virtual')
 
 
-def _expand_slice(slice, face, spec, global_space=False):
+def _expand_slice(slice_, face, spec, ghost_space=False):
     """
     Expands a 1/2-D slice to a 2/3-D slice.
 
-    :param slice: slice in the space ortogonal to the connection axis
+    :param slice_: slice in the space ortogonal to the connection axis
             identified by `face`, natural axis order
     :param face: face ID
     :param spec: SubdomainSpec for which the slice is to be generated
-    :param global_space: if True, extends the slice with a coordinate in the
-            _global_ domain space.
+    :param ghost_space: if True, extends the slice with a coordinate in the
+            local ghost space, otherwise extends with global coordinates
     """
     ss = SubdomainSpec
-    slice = slice[:]    # make a copy
-    dx = 0 if not global_space else spec.location[spec.face_to_axis(face)]
+    slice_ = slice_[:]    # make a copy
+    es = spec.envelope_size
+    axis = spec.face_to_axis(face)
+    ox = spec.location[axis] - es
+    ex = spec.end_location[axis]
+    if ghost_space:
+        ox = 0
+        ex = es + spec.size[axis]
 
-    if face == ss.X_LOW:
-        t = [dx]
-        t.extend(slice)
-        slice = t
-    elif face == ss.X_HIGH:
-        t = [dx + spec.nx - 1]
-        t.extend(slice)
-        slice = t
-    elif face == ss.Y_LOW:
-        if self.dim == 2:
-            slice = [slice[0], dx]
-        else:
-            slice = [slice[0], dx, slice[1]]
-    elif face == ss.Y_HIGH:
-        if self.dim == 2:
-            slice = [slice[0], dx + spec.ny - 1]
-        else:
-            slice = [slice[0], dx + spec.ny - 1, slice[1]]
-    elif face == ss.Z_LOW:
-        slice.append(dx)
-    elif face == ss.Z_HIGH:
-        slice.append(dx + spec.nz - 1)
+    if face in (ss.X_LOW, ss.Y_LOW, ss.Z_LOW):
+        slice_.insert(axis, slice(ox, ox + 1))
+    elif face in (ss.X_HIGH, ss.Y_HIGH, ss.Z_HIGH):
+        slice_.insert(axis, slice(ex, ex + 1))
     else:
         raise ValueError('Invalid face ID: {0}'.format(face))
 
-    return slice
+    return slice_
 
+# XXX:unicify the two classes below
+class GlobalNodeSlice(object):
+    def __init__(self, face, spec, full_slice):
+        self._face = face
+        self._slice = full_slice
+        self._spec = spec
+
+        self.conn_axis = spec.face_to_axis(face)
+        self._slice_axes = range(0, spec.dim)
+        self._slice_axes.remove(self.conn_axis)
+
+    @lazy_property
+    def local_ghost_full(self):
+        slc = []
+        for i, slice_ in enumerate(self._slice):
+            ghost_start = self._spec.location[i] - self._spec.envelope_size
+            slc.append(slice(self._slice[i].start - ghost_start,
+                             self._slice[i].stop - ghost_start))
+
+        return list(reversed(slc))
+
+    @lazy_property
+    def local(self):
+        """Slices are in the natural axis order."""
+        slc = []
+        for i, slice_ in enumerate(self._slice):
+            local_start = self._spec.location[i]
+            slc.append(slice(max(0, self._slice[i].start - local_start),
+                             min(self._spec.end_location[i],
+                                 self._slice[i].stop - local_start)))
+        del slc[self.conn_axis]
+        return slc
 
 class NodeSlice(object):
     """A slice in the global domain space."""
 
-    def __init__(self, face, spec, slice):
+    def __init__(self, face, spec, slice_):
+        """
+        :param slice_: slices in natural order, in the interface space only
+        """
         self._face = face
-        self._slice = slice
-        self._spec = spec
+        self._slice = slice_
+        self.spec = spec
 
-        conn_axis = spec.face_to_axis(face)
+        self.conn_axis = spec.face_to_axis(face)
         self._slice_axes = range(0, spec.dim)
-        self._slice_axes.remove(conn_axis)
+        self._slice_axes.remove(self.conn_axis)
 
     @lazy_property
     def global_(self):
@@ -91,53 +114,48 @@ class NodeSlice(object):
 
         Axes are in natural order.
         """
-        return _expand_slice(self._slice, self._face, self._spec, True)
+        return _expand_slice(self._slice, self._face, self.spec)
 
     @lazy_property
     def local(self):
         """Slice in the local subdomain space, including real nodes only.
 
-        The slices are in the natural axis order.
+        The slices are in the natural axis order and only cover the interface
+        dimensions..
         """
         slc = []
         for i, axis in enumerate(self._slice_axes):
-            local_start = self._spec.location[axis]
+            local_start = self.spec.location[axis]
             slc.append(slice(max(0, self._slice[i].start - local_start),
-                             min(self._spec.end_location[axis],
+                             min(self.spec.end_location[axis],
                                  self._slice[i].stop - local_start)))
         return slc
 
-    @lazy_property
-    def local_full(self):
-        """The slices are in the memory layout axis order."""
-        return list(reversed(
-            _expand_slice(self.local, self._face, self._spec)))
-
+    # This is only used to build an argument list for CUDA kernels.
     @lazy_property
     def local_ghost(self):
-        """Slice in the local subdomain space, including ghost nodes.
-
-        The slices are in the natural axis order.
-        """
+        """Slices are in the natural axis order."""
         slc = []
         for i, axis in enumerate(self._slice_axes):
-            ghost_start = self._spec.location[axis] - self._spec.envelope_size
+            ghost_start = self.spec.location[axis] - self.spec.envelope_size
             slc.append(slice(self._slice[i].start - ghost_start,
                              self._slice[i].stop - ghost_start))
         return slc
-
+            
     @lazy_property
     def local_ghost_full(self):
-        """The slices are in the memory layout axis order."""
+        """The slices are in the memory layout axis order.
+
+        The slice is across all simulation dimensions.
+        """
         return list(reversed(
-            _expand_slice(self.local_ghost, self._face, self._spec)))
+            _expand_slice(self.local_ghost, self._face, self.spec, ghost_space=True)))
 
 
 def _get_src_slice(b1, b2, slice_axes):
     """Returns slice lists identifying nodes in b1 from which
     information is sent to b2:
 
-    - slices in b1's dist buffer for distribution data
     - slices in the global coordinate system for distribution data
     - slices in a b1's field buffer from which macroscopic data is to be
       collected
@@ -152,7 +170,6 @@ def _get_src_slice(b1, b2, slice_axes):
         the area of nodes sending information to the target node; the axes
         are in the natural order (0, 1, 2)
     """
-    src_slice = []
     src_slice_global = []
     src_macro_slice = []
     dst_macro_slice = []
@@ -178,7 +195,7 @@ def _get_src_slice(b1, b2, slice_axes):
 
         # No overlap, bail out.
         if global_span_min > b1_ghost_max or global_span_max < b1_ghost_min:
-            return None, None, None, None
+            return None, None, None
 
         # For macroscopic fields, the inverse holds true: data is transferred
         # from real nodes to ghost nodes.
@@ -188,8 +205,6 @@ def _get_src_slice(b1, b2, slice_axes):
         macro_recv_min = max(b1_ghost_min, b2_real_min)
         macro_recv_max = min(b1_ghost_max, b2_real_max)
 
-        src_slice.append(slice(global_span_min - b1_ghost_min,
-            global_span_max - b1_ghost_min + 1))
         src_slice_global.append(slice(global_span_min,
             global_span_max + 1))
         src_macro_slice.append(slice(macro_span_min - b1_ghost_min,
@@ -197,62 +212,90 @@ def _get_src_slice(b1, b2, slice_axes):
         dst_macro_slice.append(slice(macro_recv_min - b1_ghost_min,
             macro_recv_max - b1_ghost_min + 1))
 
-    return src_slice, src_slice_global, src_macro_slice, dst_macro_slice
+    return src_slice_global, src_macro_slice, dst_macro_slice
 
 
-def _get_dst_full_slice(b1, b2, src_slice_global, full_map, slice_axes):
-    """Identifies nodes that transmit full information.
+def _get_dst_partial_map2(dists, grid, transfer_ns, dest_spec):
+    # In natural order..
+    transfer_coords = np.mgrid[transfer_ns.global_]
 
-    Returns a tuple of:
-    - offset vector in the plane ortogonal to the connection axis in the local
-      coordinate system of the destination subdomain (real nodes only)
-    - slice selecting part of the buffer (real nodes only) with nodes
-      containing information about all distributions
-    - same as the previous one, but the slice is for the transfer buffer
+    # The source subdomain occupies the subspace indicated by these
+    # two points in the global coordinate system.
+    min_loc = np.int32(transfer_ns.spec.location)
+    max_loc = np.int32(transfer_ns.spec.end_location)
 
-    :param b1: source SubdomainSpec
-    :param b2: target SubdomainSpec
-    :param src_slice_global: list of slices in the global coordinate system
-        identifying nodes from which information is sent to the target
-        subdomain
-    :param full_map: boolean array selecting the source nodes that have the
-        full set of distributions to be transferred to the target subdomain
-    :param slice_axes: list of axis numbers identifying axes spanning
-        the area of nodes sending information to the target node
-    """
-    dst_slice = []
-    dst_full_buf_slice = []
-    dst_low = []
-    for i, global_pos in enumerate(src_slice_global):
-        b2_start = b2.location[slice_axes[i]]
-        dst_low.append(global_pos.start - b2_start)
+    # Reshape to dim, 1, 1, 1 to allow broadcasting.
+    vec_shape = np.int32(transfer_coords.shape)
+    vec_shape[1:] = 1
 
-    full_idxs = np.argwhere(full_map)
-    if len(full_idxs) > 0:
-        # Lowest and highest coordinate along each axis.
-        full_min = np.min(full_idxs, 0)
-        full_max = np.max(full_idxs, 0)
-        # Loop over axes.
-        for i, (lo, hi) in enumerate(zip(full_min, full_max)):
-            b1_start = b1.location[slice_axes[i]]
-            b2_start = b2.location[slice_axes[i]]
-            # Offset in the local real coordinate system of the target
-            # subdomain (same as dst_low).
-            curr_to_dist = src_slice_global[i].start - b2_start
-            dst_slice.append(slice(lo + curr_to_dist, hi + 1 + curr_to_dist))
-            dst_full_buf_slice.append(slice(lo, hi+1))
+    min_loc = min_loc.reshape(vec_shape)
+    max_loc = max_loc.reshape(vec_shape)
 
-    return dst_low, dst_slice, dst_full_buf_slice
+    # Skip the first axis which selects the coordinate (X, Y, Z).
+    full_map = np.ones(transfer_coords.shape[1:], dtype=np.bool)
+    dist_idx_to_bool_map = {}
+
+    for dist_idx in dists:
+        # When we follow the basis vector backwards, do we end up at a
+        # real (non-ghost) node in the source subdomain?
+        basis_vec = np.int32([int(x) for x in grid.basis[dist_idx]]).reshape(vec_shape)
+        src_coords = transfer_coords - basis_vec
+
+        dist_map = np.logical_and(src_coords >= min_loc,
+                                  src_coords < max_loc)
+        # 'and' across all axes (X, Y, Z)
+        dist_map = np.logical_and.reduce(dist_map, 0)
+        full_map = np.logical_and(full_map, dist_map)
+
+        dist_idx_to_bool_map[dist_idx] = dist_map
+
+    # Maps distribution index to an array of indices (pairs in 3D, single
+    # coordinate in 2D) in the subdomain coordinate system (including ghost
+    # nodes).  This is used as a global memory argument for data copying
+    # kernels.
+    dst_partial_map = {}
+
+    # Transform to the dest coordinate system.
+    min_loc = np.int32(dest_spec.location)
+    min_loc -= dest_spec.envelope_size
+    min_loc = min_loc.reshape(vec_shape)
+    dest_coords = transfer_coords - min_loc
+    
+    # The first axis in the array spans the different dimensions (x, y, z).
+    # Roll the array so that this axis becomes the last.  This makes it
+    # possible to extract coordinate tuples by mask broadcasting below.
+    dest_coords = np.rollaxis(dest_coords, 0, len(dest_coords.shape))
 
 
-def _get_dst_partial_map(dists, grid, src_slice_global, b1, slice_axes,
+    for dist_idx, dist_map in dist_idx_to_bool_map.iteritems():
+        mask = np.logical_and(dist_map, np.logical_not(full_map))
+        partial_nodes = dest_coords[mask]
+        if len(partial_nodes) > 0:
+            # XXX: the indices here are in natural order; should they be in memory?
+            dst_partial_map[dist_idx] = partial_nodes
+
+    slice_ = []
+
+    if np.any(full_map):
+        for coord in transfer_coords:
+            slice_.append(
+                    slice(np.min(coord[full_map]),
+                          np.max(coord[full_map]) + 1))
+
+    full_slice = None if not slice_ else GlobalNodeSlice(
+            dest_spec.opposite_face(transfer_ns._face), dest_spec, slice_)
+
+    return dst_partial_map, full_slice 
+
+
+def _get_dst_partial_map(dists, grid, transfer_slice_global, b1, slice_axes,
         conn_axis):
     """Identifies nodes that only transmit partial information.
 
     :param dists: indices of distributions that point to the target
         subdomain
     :param grid: grid object defining the connectivity of the lattice
-    :param src_slice_global: list of slices in the global coordinate system
+    :param transfer_slice_global: list of slices in the global coordinate system
         identifying nodes from which information is sent to the target
         subdomain
     :param b1: source SubdomainSpec
@@ -266,7 +309,7 @@ def _get_dst_partial_map(dists, grid, src_slice_global, b1, slice_axes,
 
     # Creates an array where the entry at [x,y] is the global coordinate pair
     # corresponding to the node [x,y] in the transfer buffer.
-    src_coords = np.mgrid[src_slice_global]
+    src_coords = np.mgrid[transfer_slice_global]
     # [2,x,y] -> [x,y,2]
     src_coords = np.rollaxis(src_coords, 0, len(src_coords.shape))
 
@@ -295,7 +338,7 @@ def _get_dst_partial_map(dists, grid, src_slice_global, b1, slice_axes,
     # Maps distribution index to an array of indices (pairs in 3D, single
     # coordinate in 2D) in the local subdomain coordinate system (real nodes).
     dst_partial_map = {}
-    buf_min_loc = [span.start for span in src_slice_global]
+    buf_min_loc = [span.start for span in transfer_slice_global]
 
     for dist_idx, dist_map in dist_idx_to_dist_map.iteritems():
         partial_nodes = src_coords[np.logical_and(dist_map,
@@ -327,46 +370,40 @@ class LBConnection(object):
         slice_axes = range(0, b1.dim)
         slice_axes.remove(conn_axis)
 
-        src_slice, src_slice_global, src_macro_slice, dst_macro_slice = \
+        src_slice_global, src_macro_slice, dst_macro_slice = \
                 _get_src_slice(b1, b2, slice_axes)
-        if src_slice is None:
+        if src_slice_global is None:
             return None
 
+        transfer_ns = NodeSlice(face, b1, src_slice_global)
         normal = b1.face_to_normal(face)
         dists = sym.get_interblock_dists(grid, normal)
 
-        dst_partial_map, full_map = _get_dst_partial_map(dists, grid,
-                src_slice_global, b1, slice_axes, conn_axis)
-        dst_low, dst_slice, dst_full_buf_slice = _get_dst_full_slice(
-                b1, b2, src_slice_global, full_map, slice_axes)
+        dst_partial_map, dst_slice = _get_dst_partial_map2(dists, grid,
+                transfer_ns, b2)
 
         # No full or partial connection means that the topology of the grid
         # is such that there are not distributions pointing to the 2nd block.
         if not dst_slice and not dst_partial_map:
             return None
 
-        src_node_slice = NodeSlice(face, b1, src_slice_global)
-
-        return LBConnection(dists, src_node_slice, dst_low, dst_slice, dst_full_buf_slice,
+        return LBConnection(dists, transfer_ns, dst_slice,
                 dst_partial_map, src_macro_slice, dst_macro_slice, b1.id)
 
+    # XXX: This is here for unit test compatibility only.
     @property
     def src_slice(self):
-        return self.src_node_slice.local_ghost
+        return self.transfer_ns.local_ghost
 
-    def __init__(self, dists, src_node_slice, dst_low, dst_slice, dst_full_buf_slice,
+    def __init__(self, dists, transfer_ns, dst_slice,
             dst_partial_map, src_macro_slice, dst_macro_slice, src_id):
         """
         In 3D, the order of all slices always follows the natural ordering: x, y, z
 
         :param dists: indices of distributions to be transferred
-        :param src_node_slice: NodeSlice for the source block
-        :param dst_low: position of the buffer in the non-ghost coordinate system of
-            the dest block
-        :param dst_slice: slice in the non-ghost buffer of the dest block, to which
-            full dists can be written
-        :param dst_full_buf_slice: slice in the transfer buffer selecting nodes with
-            all dists; by definition: size(dst_full_buf_slice) == size(dst_slice)
+        :param transfer_ns: NodeSlice selecting the (ghost) nodes in the source
+            block from which data will be transferred
+        :param dst_slice: GlobalNodeSlice
         :param dst_partial_map: dict mapping distribution indices to lists of positions
             in the transfer buffer
         :param src_macro_slice: slice in a real scalar buffer (including ghost nodes)
@@ -378,22 +415,18 @@ class LBConnection(object):
         :param src_id: ID of the source block
         """
         self.dists = dists
-        self.src_node_slice = src_node_slice
-        self.dst_low = dst_low
+        self.transfer_ns = transfer_ns
         self.dst_slice = dst_slice
-        self.dst_full_buf_slice = dst_full_buf_slice
         self.dst_partial_map = dst_partial_map
         self.src_macro_slice = src_macro_slice
         self.dst_macro_slice = dst_macro_slice
         self.block_id = src_id
         self.src_wet_map = None
 
+    # XXX: also compare transfer_ns
     def __eq__(self, other):
         return ((self.dists == other.dists) and
-                (self.src_slice == other.src_slice) and
-                (self.dst_low == other.dst_low) and
                 (self.dst_slice == other.dst_slice) and
-                (self.dst_full_buf_slice == other.dst_full_buf_slice) and
                 (self.block_id == other.block_id))
 
     def __ne__(self, other):
@@ -402,17 +435,18 @@ class LBConnection(object):
     @property
     def elements(self):
         """Size of the connection buffer in elements."""
-        return len(self.dists) * span_area(self.src_slice)
+        return len(self.dists) * span_area(self.transfer_ns.local_ghost_full)
 
     @property
     def nodes(self):
         """Size of the connection buffer in nodes."""
-        return span_area(self.src_slice)
+        return span_area(self.transfer_ns.local_ghost_full)
 
     @property
     def transfer_shape(self):
         """Logical shape of the transfer buffer."""
-        return [len(self.dists)] + map(lambda x: int(x.stop - x.start), reversed(self.src_slice))
+        return [len(self.dists)] + map(lambda x: int(x.stop - x.start),
+                reversed(self.transfer_ns.local_ghost_full))
 
     @property
     def partial_nodes(self):
@@ -421,7 +455,8 @@ class LBConnection(object):
     @property
     def full_shape(self):
         """Logical shape of the buffer for nodes with a full set of distributions."""
-        return [len(self.dists)] + map(lambda x: int(x.stop - x.start), reversed(self.dst_slice))
+        return [len(self.dists)] + map(lambda x: int(x.stop - x.start),
+                reversed(self.dst_slice.local))
 
     @property
     def macro_transfer_shape(self):
@@ -873,7 +908,7 @@ class Subdomain(object):
         assert connection.block_id == self.spec.id
 
         wet_types = self._type_map.dtype.type(nt.get_wet_node_type_ids())
-        return util.in_anyd(self._type_map[connection.src_node_slice.local_full],
+        return util.in_anyd(self._type_map[connection.transfer_ns.local_full],
                 wet_types)
 
     def encoded_map(self):

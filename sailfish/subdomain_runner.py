@@ -94,9 +94,8 @@ class ConnectionBuffer(object):
             backend.to_buf_async(self.dist_partial_buf.gpu, stream)
 
         if self.cpair.dst.dst_slice:
-            slc = [slice(0, self.recv_buf.shape[0])] + list(
-                    reversed(self.cpair.dst.dst_full_buf_slice))
-            self.dist_full_buf.host[:] = self.recv_buf[slc]
+            self.dist_full_buf.host[:] = self.recv_buf[
+                    np.logical_not(self.dist_partial_sel)]
             backend.to_buf_async(self.dist_full_buf.gpu, stream)
 
 
@@ -632,15 +631,31 @@ class SubdomainRunner(object):
             return ((gx + arr_nx * gy + arr_nx * arr_ny * gz) +
                     (self._get_nodes() * dist_num))
 
-    def _idx_helper(self, gx, buf_slice, dists):
+    def _idx_helper(self, node_slice, dists, mask=None):
+        """
+        :param node_slice: NodeSlice object
+        :param dists: list of distribution indices
+        :param mask: mask
+        """
         sel = [slice(0, len(dists))]
-        idx = np.mgrid[sel + list(reversed(buf_slice))].astype(np.uint32)
+        idx = np.mgrid[sel + node_slice.local_ghost_full].astype(np.uint32)
         for i, dist_num in enumerate(dists):
             idx[0][i,:] = dist_num
+
+        if mask is not None:
+            shape = list(mask.shape)
+            shape.insert(self.dim - node_slice.conn_axis, 1)
+            tmp_mask = np.zeros(shape, dtype=np.bool)
+            tmp_mask[:] = mask
+            shape.insert(0, len(dists))
+            final_mask = np.zeros(shape, dtype=np.bool)
+            final_mask[:] = mask
+            idx = idx[final_mask]
+
         if self.dim == 2:
-            return self._get_global_idx((gx, idx[1]), idx[0]).astype(np.uint32)
+            return self._get_global_idx((idx[2], idx[1]), idx[0]).astype(np.uint32)
         else:
-            return self._get_global_idx((gx, idx[2], idx[1]),
+            return self._get_global_idx((idx[3], idx[2], idx[1]),
                     idx[0]).astype(np.uint32)
 
     def _get_src_slice_indices(self, face, cpair):
@@ -650,11 +665,17 @@ class SubdomainRunner(object):
         :param face: face ID for the connection
         :param cpair: ConnectionPair describing the connection
         """
-        if face in (self._block.X_LOW, self._block.X_HIGH):
-            gx = self.lat_linear[face]
+        if cpair.src.src_wet_map is not None:
+            return self._idx_helper(
+                    cpair.src.transfer_ns,
+                    cpair.src.dists,
+                    cpair.src.src_wet_map)
+        elif face in (self._block.X_LOW, self._block.X_HIGH):
+            return self._idx_helper(
+                    cpair.src.transfer_ns,
+                    cpair.src.dists)
         else:
             return None
-        return self._idx_helper(gx, cpair.src.src_slice, cpair.src.dists)
 
     def _get_dst_slice_indices(self, face, cpair):
         """Returns a numpy array of indices of sparse nodes to which
@@ -666,27 +687,11 @@ class SubdomainRunner(object):
         if not cpair.dst.dst_slice:
             return None
         if face in (self._block.X_LOW, self._block.X_HIGH):
-            gx = self.lat_linear_dist[self._block.opposite_face(face)]
+            return self._idx_helper(
+                    cpair.dst.dst_slice,
+                    cpair.dst.dists)
         else:
             return None
-        es = self._block.envelope_size
-        dst_slice = [
-                slice(x.start + es, x.stop + es) for x in
-                cpair.dst.dst_slice]
-        return self._idx_helper(gx, dst_slice, cpair.dst.dists)
-
-    def _dst_face_loc_to_full_loc(self, face, face_loc):
-        axis = self._block.face_to_axis(face)
-        missing_loc = self.lat_linear_dist[self._block.opposite_face(face)]
-        if axis == 0:
-            return [missing_loc] + face_loc
-        elif axis == 1:
-            if self.dim == 2:
-                return (face_loc[0], missing_loc)
-            else:
-                return (face_loc[0], missing_loc, face_loc[1])
-        elif axis == 2:
-            return face_loc + [missing_loc]
 
     def _get_partial_dst_indices(self, face, cpair):
         """Returns objects used to store data for nodes for which a partial
@@ -707,19 +712,22 @@ class SubdomainRunner(object):
         buf = self.backend.alloc_async_host_buf(cpair.dst.partial_nodes,
                 dtype=self.float)
         idx = np.zeros(cpair.dst.partial_nodes, dtype=np.uint32)
-        dst_low = [x + self._block.envelope_size for x in cpair.dst.dst_low]
         sel = []
         i = 0
         for dist_num, locations in sorted(cpair.dst.dst_partial_map.items()):
             for loc in locations:
-                dst_loc = [x + y for x, y in zip(dst_low, loc)]
-                dst_loc = self._dst_face_loc_to_full_loc(face, dst_loc)
+                idx[i] = self._get_global_idx(loc, dist_num)
 
+
+                # Transform to the real node coordinate system.
+                loc2 = [c - cpair.dst.dst_slice._spec.envelope_size for c in loc]
                 # Reverse 'loc' here to go from natural order (x, y, z) to the
                 # in-face buffer order z, y, x
-                sel.append([cpair.dst.dists.index(dist_num)] + list(reversed(loc)))
-                idx[i] = self._get_global_idx(dst_loc, dist_num)
+                sel.append([cpair.dst.dists.index(dist_num)] + list(reversed(loc2)))
+                print loc, cpair.dst.dst_slice._spec, loc2
+
                 i += 1
+
         sel2 = []
         for i in range(0, len(sel[0])):
             sel2.append([])
@@ -1034,8 +1042,8 @@ class SubdomainRunner(object):
         # Continuous data collection.
         else:
             # [X, Z * dists] or [X, Y * dists]
-            min_max = ([x.start for x in cbuf.cpair.src.src_slice] +
-                    list(reversed(cbuf.coll_buf.host.shape[1:])))
+            min_max = ([x.start for x in cbuf.cpair.src.transfer_ns.local_ghost] +
+                       [x.stop for x in cbuf.cpair.src.transfer_ns.local_ghost])
             min_max[-1] = min_max[-1] * len(cbuf.cpair.src.dists)
             if self.dim == 2:
                 signature = 'PiiiP'
@@ -1043,7 +1051,8 @@ class SubdomainRunner(object):
             else:
                 signature = 'PiiiiiP'
                 grid_size = (grid_dim1(cbuf.coll_buf.host.shape[-1]),
-                    cbuf.coll_buf.host.shape[-2] * len(cbuf.cpair.src.dists))
+                    cbuf.coll_buf.host.shape[-2] *
+                    cbuf.coll_buf.host.shape[-3] * len(cbuf.cpair.src.dists))
 
             def _get_cont_coll_kernel(i):
                 return KernelGrid(
@@ -1107,9 +1116,8 @@ class SubdomainRunner(object):
             # Continuous indexing.
             elif cbuf.cpair.dst.dst_slice:
                 # [X, Z * dists] or [X, Y * dists]
-                low = [x + self._block.envelope_size for x in cbuf.cpair.dst.dst_low]
-                min_max = ([(x + y.start) for x, y in zip(low, cbuf.cpair.dst.dst_slice)] +
-                        list(reversed(cbuf.dist_full_buf.host.shape[1:])))
+                min_max = ([x.start for x in cbuf.cpair.dst.dst_slice.local] +
+                           [x.stop for x in cbuf.cpair.dst.dst_slice.local])
                 min_max[-1] = min_max[-1] * len(cbuf.cpair.dst.dists)
 
                 if self.dim == 2:
@@ -1207,32 +1215,35 @@ class SubdomainRunner(object):
         self._sim.initial_conditions(self)
         self._sim.verify_fields()
 
-    def _send_wet_map(self):
-        """Sends wet node maps to remote subdomains."""
-        subd_spec = self._block
-
-        for face, subdomain_id in subd_spec.connecting_subdomains():
-            cpairs = self._block.get_connections(face, subdomain_id)
-            connector = self._block._connectors[subdomain_id]
-            for cpair in cpairs:
-                wet_map = self._subdomain.interface_wet_map(face, cpair.src)
-                connector.send(wet_map)
-                cpair.src.src_wet_map = wet_map
-
-    def _recv_wet_map(self):
-        """Receives wet node maps from remote subdomains."""
-        subd_spec = self._block
-
-        for face, subdomain_id in subd_spec.connecting_subdomains():
-            cpairs = self._block.get_connections(face, subdomain_id)
-            connector = self._block._connectors[subdomain_id]
-            for cpair in cpairs:
-                wet_map = np.zeros(cpair.dst.nodes, dtype=np.bool)
-                if not connector.recv(wet_map, self._quit_event):
-                    return
-
-                cpair.dst.src_wet_map = wet_map
-
+#    def _send_wet_map(self):
+#        """Sends wet node maps to remote subdomains."""
+#        subd_spec = self._block
+#
+#        for face, subdomain_id in subd_spec.connecting_subdomains():
+#            cpairs = self._block.get_connections(face, subdomain_id)
+#            connector = self._block._connectors[subdomain_id]
+#            for cpair in cpairs:
+#                wet_map = self._subdomain.interface_wet_map(face, cpair.src)
+#                print ('send: ', wet_map.shape, cpair.src.src_node_slice.local_full,
+#                        cpair.src.src_slice, cpair.src.src_node_slice._slice)
+#                connector.send(wet_map)
+#                cpair.src.src_wet_map = wet_map
+#
+#    def _recv_wet_map(self):
+#        """Receives wet node maps from remote subdomains."""
+#        subd_spec = self._block
+#
+#        for face, subdomain_id in subd_spec.connecting_subdomains():
+#            cpairs = self._block.get_connections(face, subdomain_id)
+#            connector = self._block._connectors[subdomain_id]
+#            for cpair in cpairs:
+#                print 'recv: ', cpair.dst.nodes, cpair.dst.src_slice
+#                wet_map = np.zeros(cpair.dst.nodes, dtype=np.bool)
+#                if not connector.recv(wet_map, self._quit_event):
+#                    return
+#
+#                cpair.dst.src_wet_map = wet_map
+#
     def _optimize_subdomain_connections(self):
         """Identifies wet nodes in the subdomain interface.
 
@@ -1245,8 +1256,8 @@ class SubdomainRunner(object):
         if not self.config.ignore_dry_nodes_in_subdomain_transfers:
             return
 
-        self._send_wet_map()
-        self._recv_wet_map()
+#        self._send_wet_map()
+#        self._recv_wet_map()
 
     def run(self):
         self.config.logger.info("Initializing block.")

@@ -2,6 +2,11 @@
 
 Coordinates simulation of multiple subdomains on a single host."""
 
+# enable peer access
+# can access peer?
+# wrap pointers in IPCMemoryHandle
+# memcpy_peer_async
+
 __author__ = 'Michal Januszewski'
 __email__ = 'sailfish-cfd@googlegroups.com'
 __license__ = 'LGPL3'
@@ -117,7 +122,7 @@ class LBMachineMaster(object):
         else:
             return ctypes.c_float
 
-    def _init_connectors(self):
+    def _init_connectors(self, subdomain2gpu):
         """Creates subdomain connectors for all subdomains connections."""
         # A set to keep track which connections are already created.
         _subdomain_conns = set()
@@ -128,6 +133,7 @@ class LBMachineMaster(object):
         ipc_files = []
 
         for subdomain in self.subdomains:
+            curr_gpu = subdomain2gpu[subdomain.id]
             connecting_subdomains = subdomain.connecting_subdomains()
             for face, nbid in connecting_subdomains:
                 if (subdomain.id, nbid) in _subdomain_conns:
@@ -154,11 +160,21 @@ class LBMachineMaster(object):
                             subdomain.id, nbid, size1, size2, face_str))
 
                 if nbid in local_subdomain_ids:
-                    c1, c2 = ZMQSubdomainConnector.make_ipc_pair(ctype, (size1, size2),
-                                                             (subdomain.id, nbid))
-                    subdomain.add_connector(nbid, c1)
-                    ipc_files.append(c1.ipc_file)
-                    local_subdomain_map[nbid].add_connector(subdomain.id, c2)
+                    # Try peer-to-peer access if possible.
+                    nb_gpu = subdomain2gpu[nbid]
+                    if backend_cls.peer2peer_supported(curr_gpu, nb_gpu):
+                        c1, c2 = CUDAPeerToPeerConnector.make_pair(
+                            (subdomain.id, nbid), (curr_gpu, nb_gpu))
+                        subdomain.add_connector(nbid, c1)
+                        local_subdomain_map[nbid].add_connector(subdomain.id,
+                                                                c2)
+                    else
+                        c1, c2 = ZMQSubdomainConnector.make_ipc_pair(
+                            ctype, (size1, size2), (subdomain.id, nbid))
+                        subdomain.add_connector(nbid, c1)
+                        ipc_files.append(c1.ipc_file)
+                        local_subdomain_map[nbid].add_connector(subdomain.id,
+                                                                c2)
                 else:
                     receiver = subdomain.id > nbid
                     if receiver:
@@ -325,7 +341,7 @@ class LBMachineMaster(object):
         subdomain2gpu = self._assign_subdomains_to_gpus()
         self.config.logger.info('Subdomain -> GPU map: {0}'.format(subdomain2gpu))
 
-        ipc_files = self._init_connectors()
+        ipc_files = self._init_connectors(subdomain2gpu)
         output_initializer = self._init_visualization_and_io(self.sim)
         try:
             backend_cls = util.get_backends(self.config.backends.split(',')).next()

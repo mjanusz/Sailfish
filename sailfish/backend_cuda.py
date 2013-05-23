@@ -1,7 +1,7 @@
 """Sailfish CUDA backend."""
 
 __author__ = 'Michal Januszewski'
-__email__ = 'sailfish-cfd@googlegroups.com'
+_supported__email__ = 'sailfish-cfd@googlegroups.com'
 __license__ = 'LGPL3'
 
 import operator
@@ -84,6 +84,12 @@ class CUDABackend(object):
                            'from the GPU. Might slightly degrade performance.')
         return 1
 
+    @classmethod
+    def peer2peer_supported(cls, gpu1, gpu2):
+        d1 = cuda.Device(gpu1)
+        d2 = cuda.Device(gpu2)
+        return d1.can_access_peer(d2) and d2.can_access_peer(d1)
+
     def __init__(self, options, gpu_id):
         """Initializes the CUDA backend.
 
@@ -100,6 +106,8 @@ class CUDABackend(object):
         self._ctx = self._device.make_context(
             flags=cuda.ctx_flags.SCHED_AUTO if not options.cuda_sched_yield else
             cuda.ctx_flags.SCHED_YIELD)
+        # GPU id -> Context
+        self._peers = {}
 
         # To keep track of allocated memory.
         self._total_memory_bytes = 0
@@ -108,6 +116,17 @@ class CUDABackend(object):
 
     def __del__(self):
         self._ctx.pop()
+
+    def add_peer(self, peer_id):
+        if peer_id in self._peers:
+            return
+
+        peer_gpu = cuda.Device(peer_id)
+        peer_ctx = self._device.make_context()
+        self._ctx.enable_peer_access(peer_ctx)
+        # Make self._ctx active again.
+        cuda.Context.pop()
+        self._peers[peer_id] = peer_ctx
 
     @property
     def supports_printf(self):
@@ -186,6 +205,18 @@ class CUDABackend(object):
 
     def from_buf_async(self, cl_buf, stream=None):
         cuda.memcpy_dtoh_async(self.buffers[cl_buf], cl_buf, stream)
+
+    def to_peer_async(self, cl_buf, peer_addr, peer_id, stream=None):
+        cuda.memcpy_peer_async(peer_addr, cl_buf, self.buffers[cl_buf].nbytes,
+                               dest_context=self._peers[peer_id],
+                               src_context=self._ctx,
+                               stream)
+
+    def from_peer_async(self, peer_addr, cl_buf, peer_id, stream=None):
+        cuda.memcpy_peer_async(cl_buf, peer_addr, self.buffers[cl_buf].nbytes,
+                               dest_context=self._ctx,
+                               src_context=self._peers[peer_id],
+                               stream)
 
     def build(self, source):
         if self.options.cuda_nvcc_opts:

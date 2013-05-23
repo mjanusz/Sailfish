@@ -118,7 +118,7 @@ class SubdomainRunner(object):
         ports = {}
         for b_id, connector in self._spec._connectors.iteritems():
             if connector.is_ready():
-                connector.init_runner(self._ctx)
+                connector.init_runner(self._ctx, self.backend)
                 if connector.port is not None:
                     ports[(self._spec.id, b_id)] = (connector.get_addr(),
                             connector.port)
@@ -133,7 +133,7 @@ class SubdomainRunner(object):
             addr, port = remote_ports[(b_id, self._spec.id)]
             connector.port = port
             connector.set_addr(addr)
-            connector.init_runner(self._ctx)
+            connector.init_runner(self._ctx, self.backend)
 
     @property
     def config(self):
@@ -876,22 +876,36 @@ class SubdomainRunner(object):
         else:
             buf = 'coll_buf'
 
+        # Queue remote transfers.
         for b_id, connector in self._spec._connectors.iteritems():
+            if connector.peer2peer:
+                continue
             conn_bufs = self._block_to_connbuf[b_id]
             for x in conn_bufs:
                 self.backend.from_buf_async(getattr(x, buf).gpu, self._data_stream)
 
+        # Queue peer-to-peer transfers.
+        for b_id, connector in self._spec._connectors.iteritems():
+            if not connector.peer2peer:
+                continue
+            connector.send(self._data_stream)
+        
         self.backend.sync_stream(self._data_stream)
 
         for b_id, connector in self._spec._connectors.iteritems():
             conn_bufs = self._block_to_connbuf[b_id]
 
-            if len(conn_bufs) > 1:
-                connector.send(np.hstack(
-                    [np.ravel(getattr(x, buf).host) for x in conn_bufs]))
+            if connector.peer2peer:
+                # For peer-to-peer connections, the transfer is already done at
+                # this point.
+                connector.confirm_send()
             else:
-                # TODO(michalj): Use non-blocking sends here?
-                connector.send(np.ravel(getattr(conn_bufs[0], buf).host).copy())
+                if len(conn_bufs) > 1:
+                    connector.send(np.hstack(
+                        [np.ravel(getattr(x, buf).host) for x in conn_bufs]))
+                else:
+                    # TODO(michalj): Use non-blocking sends here?
+                    connector.send(np.ravel(getattr(conn_bufs[0], buf).host).copy())
 
     @profile(TimeProfile.RECV_DISTS)
     def _recv_dists(self):

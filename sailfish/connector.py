@@ -14,9 +14,58 @@ import tempfile
 import numpy as np
 from multiprocessing import Array, Event
 
+class BaseConnector(object):
+    def init_runner(self, ctx, backend):
+        """Called from the block runner of the sender subdomain.
+
+        :param ctx: zmq context if applicable
+        :param backend: computational backend object
+        """
+        pass
+
+    def is_ready(self):
+        return True
+
+    # If True, data is not loaded onto the host for transfer.
+    peer2peer = False
+
+# XXX: need remote dest in IPC wrapper
+class CUDAPeerToPeerConnector(BaseConnector):
+    peer2peer = True
+
+    def __init__(self, remote_gpu_id, local_gpu_id, send_ev, recv_ev):
+        self.remote_gpu_id = remote_gpu_id
+        self.local_gpu_id = local_gpu_id
+        self._backend = None
+        self._send_ev = send_ev
+        self._recv_ev = recv_ev
+
+    def send(self, cl_buf, stream):
+        pycuda.driver.mem_get_ipc_handle
+        backend.to_peer_async(cl_buf, peer_addr, self.remote_gpu_id, stream)
+
+    def confirm_send(self):
+        self._send_ev.set()
+
+    def recv(self, data, quit_ev):
+        # XXX: wait for event to be set
+        self._recv_ev.reset()
+
+    def init_runner(self, ctx, backend):
+        backend.add_peer(self.remote_gpu_id)
+        self.backend = backend
+
+    @classmethod
+    def make_pair(self, gpu_ids):
+        ev1 = Event()
+        ev2 = Event()
+
+        return (CUDAPeerToPeerConnector(gpu_ids[1], gpu_ids[0], ev1, ev2),
+                CUDAPeerToPeerConnector(gpu_ids[0], gpu_ids[1], ev2, ev1))
+
 # Note: this connector is currently slower than ZMQSubdomainConnector using
 # IPC.
-class MPSubdomainConnector(object):
+class MPSubdomainConnector(BaseConnector):
     """Handles directed data exchange between two subdomains using the
     multiprocessing module."""
 
@@ -48,10 +97,6 @@ class MPSubdomainConnector(object):
         self._conf_ev.set()
         return True
 
-    def init_runner(self, ctx):
-        """Called from the block runner of the sender block."""
-        pass
-
     @classmethod
     def make_pair(self, ctype, sizes, ids):
         array1 = Array(ctype, sizes[0])
@@ -66,8 +111,7 @@ class MPSubdomainConnector(object):
         return (MPSubdomainConnector(array1, array2, ev1, ev2, ev3, ev4),
                 MPSubdomainConnector(array2, array1, ev2, ev1, ev4, ev3))
 
-
-class ZMQSubdomainConnector(object):
+class ZMQSubdomainConnector(BaseConnector):
     """Handles directed data exchange between two subdomains using 0MQ."""
 
     def __init__(self, addr, receiver=False):
@@ -84,7 +128,7 @@ class ZMQSubdomainConnector(object):
         else:
             self.ipc_file = None
 
-    def init_runner(self, ctx):
+    def init_runner(self, ctx, runner):
         """Called from the block runner of the sender block."""
         import zmq
         self.socket = ctx.socket(zmq.PAIR)
@@ -102,9 +146,6 @@ class ZMQSubdomainConnector(object):
 
         msg = self.socket.recv(copy=False)
         data[:] = np.frombuffer(buffer(msg), dtype=data.dtype)
-        return True
-
-    def is_ready(self):
         return True
 
     @classmethod
@@ -130,7 +171,7 @@ class ZMQRemoteSubdomainConnector(ZMQSubdomainConnector):
     def is_ready(self):
         return self.port != None or not self._receiver
 
-    def init_runner(self, ctx):
+    def init_runner(self, ctx, runner):
         import zmq
         self.socket = ctx.socket(zmq.PAIR)
         if self._receiver:

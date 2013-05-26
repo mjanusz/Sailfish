@@ -6,3 +6,6 @@ http://tech.unige.ch/cvmlcpp/
 
 Once you get the archive, unpack it so that the library is in the cvmlcpp
 directory.
+
+To build with g++:
+  make CXX=g++-mp-4.7 CXXFLAGS=

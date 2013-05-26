@@ -123,6 +123,8 @@ vector<Subdomain> ToSubdomains(const Octree::DNode node) {
 				if (h.fill_fraction() > kMinFillFraction) {
 					merged = true;
 					child = h;
+
+					cout << t << " + " << child << " -> " << h << endl;
 					break;
 				} else if (h.len() < 32) {
 					merged_s.push_back(h);
@@ -134,11 +136,11 @@ vector<Subdomain> ToSubdomains(const Octree::DNode node) {
 				}
 			}
 			if (!merged) {
-				if (merged_s.size() > 0) {
-					*max_repl = *max_repl + t;
-				} else {
+//				if (merged_s.size() > 0) {
+//					*max_repl = *max_repl + t;
+//				} else {
 					children.push_back(t);
-				}
+//				}
 			}
 		}
 	}

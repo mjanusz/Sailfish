@@ -51,9 +51,9 @@ class Subdomain {
 		c << "{ pos: [" << origin_.x() << ", "
 						<< origin_.y() << ", "
 						<< origin_.z() << "], "
-		  << "size: [" << extent_.x() << ", "
-		                 << extent_.y() << ", "
-					     << extent_.z() << "] }";
+		  << "size: [" << extent_.x() - origin_.x() + 1 << ", "
+		               << extent_.y() - origin_.y() + 1 << ", "
+					   << extent_.z() - origin_.z() + 1 << "] }";
 		return c.str();
 	}
 

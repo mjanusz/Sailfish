@@ -96,7 +96,7 @@ TEST(SubdomainConversion, SingleSubdomain) {
 
 TEST(SubdomainConversion, TShapeGeometry) {
 	Geometry<float> geometry;
-	double voxel_size = 1.0 / 100.0;
+	double voxel_size = 1.0 / 10.0;
 	readSTL(geometry, "t_shape.stl");
 	geometry.scaleTo(1.0);
 
@@ -119,7 +119,7 @@ TEST(SubdomainConversion, TShapeGeometry) {
 	auto res = ToSubdomains(octree.root());
 	cout << res.size() << endl;
 	for (auto t : res) {
-		cout << t.JSON() << endl;
+		cout << t.JSON() << ", " << endl;
 	}
 }
 

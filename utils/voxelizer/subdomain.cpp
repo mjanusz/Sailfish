@@ -50,10 +50,15 @@ iPoint3D NodeExtent(const Octree::DNode& node) {
 	return extent.jmp(-1, -1, -1);
 }
 
+// node_id -> number of fluid nodes.
+static unordered_map<size_t, int> fluid_cache;
+
+void FlushFluidCache() {
+	fluid_cache.clear();
+}
+
 // Returns the number of children fluid nodes.
 int CountFluidNodes(const Octree::DNode& node) {
-	// node_id -> number of fluid nodes.
-	static unordered_map<size_t, int> fluid_cache;
 
 	auto it = fluid_cache.find(node.id());
 	if (it != fluid_cache.end()) {

@@ -42,19 +42,6 @@ int main(int argc, char **argv)
 	 * Check organization of data in the tree.
 	 /
 	{
-		Octree octree(0);
-		octree.expand('a');
-		for (int i = 0; i < 8; i++) {
-			(octree.root())[i]() = (char)('a' + i);
-		}
-
-		expand(octree, voxels);
-		cout.write(&(voxels.begin()[0]), voxels.size());
-		cout << endl;
-		cout << octree.max_depth() << endl;
-		cout << NodeLocation(octree.root()[0]) << " " << NodeExtent(octree.root()[0])  << endl;
-		// aecgbfdh
-		return 0;
 	} */
 	readSTL(geometry, argv[1]);
 

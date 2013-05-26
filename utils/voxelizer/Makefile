@@ -1,13 +1,15 @@
 all: voxelizer voxelizer_octree
 
 CXX=clang++
-CXXFLAGS=-stdlib=libc++ -I/opt/local/include
+CXXFLAGS=-stdlib=libc++ -I/opt/local/include -fopenmp
 
-voxelizer:
-	$(CXX) -O3 -DNDEBUG -fopenmp -std=c++11 $(CXXFLAGS) voxelizer.cpp -I. -Icvmlcpp -o $@
+.PHONY: subdomain_test voxelizer voxelizer_octree
 
-voxelizer_octree:
-	$(CXX) -O3 -DNDEBUG -fopenmp -std=c++11 $(CXXFLAGS) voxelizer_octtree.cpp subdomain.cpp -I. -Icvmlcpp -o $@
+voxelizer: voxelizer.cpp
+	$(CXX) -O3 -DNDEBUG -std=c++11 $(CXXFLAGS) voxelizer.cpp -I. -Icvmlcpp -o $@
 
-subdomain_test:
-	$(CXX) -std=c++11 $(CXXFLAGS) subdomain_test.cpp -I. -Icvmlcpp -lgtest -lgtest_main -o $@
+voxelizer_octree: voxelizer_octtree.cpp
+	$(CXX) -O3 -DNDEBUG -std=c++11 $(CXXFLAGS) voxelizer_octtree.cpp subdomain.cpp -I. -Icvmlcpp -o $@
+
+subdomain_test: subdomain_test.cpp
+	$(CXX) -std=c++11 $(CXXFLAGS) subdomain_test.cpp subdomain.cpp -I. -Icvmlcpp -lgtest -lgtest_main -o $@

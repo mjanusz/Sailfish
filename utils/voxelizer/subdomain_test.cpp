@@ -53,6 +53,7 @@ TEST(DTreeNode, NodeExtent) {
 }
 
 TEST(SubdomainConversion, SingleSubdomain) {
+	FlushFluidCache();
 	Octree octree(0);
 	octree.expand(kWall);
 	octree.root()[0]() = kFluid;
@@ -96,15 +97,16 @@ TEST(SubdomainConversion, SingleSubdomain) {
 
 TEST(SubdomainConversion, TShapeGeometry) {
 	Geometry<float> geometry;
-	double voxel_size = 1.0 / 10.0;
+	double voxel_size = 1.0 / 9.0;
 	readSTL(geometry, "t_shape.stl");
 	geometry.scaleTo(1.0);
 
 	FlushFluidCache();
 	Octree octree(0);
 	voxelize(geometry, octree, voxel_size, kFluid, kWall);
-	cout  << octree.max_depth() << endl;
+	cout << octree.max_depth() << endl;
 
+	//EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0][0][1][1]));
 	/*  3 2 3
 	 * |-| |-|
 	 * BBBBBBB

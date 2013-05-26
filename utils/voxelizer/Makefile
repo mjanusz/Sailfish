@@ -1,7 +1,8 @@
 all: voxelizer voxelizer_octree
 
 CXX=clang++
-CXXFLAGS=-stdlib=libc++ -I/opt/local/include -fopenmp
+CXXFLAGS=-stdlib=libc++ -I/opt/local/include
+#-fopenmp
 
 .PHONY: subdomain_test voxelizer voxelizer_octree
 

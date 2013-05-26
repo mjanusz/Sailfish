@@ -72,6 +72,16 @@ class Subdomain {
 		return result;
 	}
 
+	bool contains(const Subdomain& other) const {
+		return
+			other.origin_.x() >= this->origin_.x() &&
+			other.extent_.x() <= this->extent_.x() &&
+			other.origin_.y() >= this->origin_.y() &&
+			other.extent_.y() <= this->extent_.y() &&
+			other.origin_.z() >= this->origin_.z() &&
+			other.extent_.z() <= this->extent_.z();
+	}
+
 	int len() const {
 		return (extent_.x() - origin_.x() + 1);
 	}
@@ -85,6 +95,10 @@ class Subdomain {
 
 	int fluid_nodes() const {
 		return fluid_nodes_;
+	}
+
+	void add_fluid(int fluid) {
+		fluid_nodes_ += fluid;
 	}
 
 	double fill_fraction() const {

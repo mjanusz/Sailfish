@@ -23,7 +23,7 @@
 
 			// Colors from http://www.two4u.com/color/small-txt.html
 			var colors = [
-"#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FF00FF", "#00FFFF", "#FFFF00", "#000000",
+"#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FF00FF", "#00FFFF", "#FFFF00",
 "#70DB93", "#B5A642", "#5F9F9F", "#B87333", "#2F4F2F", "#9932CD", "#871F78", "#855E42",
 "#545454", "#8E2323", "#F5CCB0", "#238E23", "#CD7F32", "#DBDB70", "#C0C0C0", "#527F76",
 "#9F9F5F", "#8E236B", "#2F2F4F", "#EBC79E", "#CFB53B", "#FF7F00", "#DB70DB", "#D9D9F3",
@@ -33,8 +33,9 @@
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 			
 			var subdomains = [
-			{ pos: [0, 0, 3], size: [8, 2, 2] },
-			{ pos: [4, 0, 0], size: [1, 1, 4] },	
+			{ pos: [0, 0, 2], size: [8, 2, 3] },
+			{ pos: [7, 0, 0], size: [2, 2, 7] },
+			{ pos: [6, 0, 4], size: [2, 2, 3] },
 			];
 
 			var camera, scene, renderer;

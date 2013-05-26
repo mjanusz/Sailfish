@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - materials - wireframe</title>
+		<meta charset="utf-8">
+		<style>
+			body {
+				margin: 0px;
+				background-color: #000000;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<script src="http://threejs.org/build/three.min.js"></script>
+		<script src="http://threejs.org/examples/js/controls/TrackballControls.js"></script>
+		<script src="http://threejs.org/examples/js/Detector.js"></script>
+		<script src="http://threejs.org/examples/js/libs/stats.min.js"></script>
+
+		<script>
+
+			// Colors from http://www.two4u.com/color/small-txt.html
+			var colors = [
+"#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FF00FF", "#00FFFF", "#FFFF00", "#000000",
+"#70DB93", "#B5A642", "#5F9F9F", "#B87333", "#2F4F2F", "#9932CD", "#871F78", "#855E42",
+"#545454", "#8E2323", "#F5CCB0", "#238E23", "#CD7F32", "#DBDB70", "#C0C0C0", "#527F76",
+"#9F9F5F", "#8E236B", "#2F2F4F", "#EBC79E", "#CFB53B", "#FF7F00", "#DB70DB", "#D9D9F3",
+"#5959AB", "#8C1717", "#238E68", "#6B4226", "#8E6B23", "#007FFF", "#00FF7F", "#236B8E",
+"#38B0DE", "#DB9370", "#ADEAEA", "#5C4033", "#4F2F4F", "#CC3299", "#99CC32"];
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+			
+			var subdomains = [
+			{ pos: [0, 0, 0], size: [24, 9, 24] },
+			{ pos: [2, 0, 2], size: [31, 9, 24] },
+			{ pos: [16, 0, 8], size: [39, 9, 24] },
+			];
+
+			var camera, scene, renderer;
+			var meshes = [];
+
+			init();
+			animate();
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.z = 100;
+
+				controls = new THREE.TrackballControls( camera );
+				controls.target.set( 0, 0, 0 )
+				
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+
+				controls.noZoom = false;
+				controls.noPan = false;
+
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+
+				controls.keys = [ 65, 83, 68 ];
+
+				controls.addEventListener( 'change', render );
+
+				scene = new THREE.Scene();
+
+				for (var i = 0; i < subdomains.length; i++) {
+					var sub = subdomains[i];
+					var materialLines = new THREE.MeshBasicMaterial( { wireframe: true, color: colors[i] } );
+
+					var geo = new THREE.CubeGeometry( sub.size[0], sub.size[1], sub.size[2] );
+					var mesh = new THREE.Mesh( geo, materialLines );
+					mesh.position.x = sub.pos[0];
+					mesh.position.y = sub.pos[1];
+					mesh.position.z = sub.pos[2];
+					meshes.push(mesh);
+					scene.add(mesh);
+				}
+
+
+				// renderer
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild( stats.domElement );
+
+				// events
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				controls.update();
+			}
+
+
+			function render() {
+				renderer.render( scene, camera );
+				stats.update();
+			}
+
+		</script>
+
+	</body>
+</html>

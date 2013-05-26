@@ -1,6 +1,11 @@
 #include <gtest/gtest.h>
 #include "subdomain.hpp"
 
+#include <cvmlcpp/volume/Geometry>
+#include <cvmlcpp/volume/VolumeIO>
+#include <cvmlcpp/volume/Voxelizer>
+#include <cvmlcpp/volume/VoxelTools>
+
 using namespace std;
 
 Octree MakeTestTree() {
@@ -86,6 +91,35 @@ TEST(SubdomainConversion, SingleSubdomain) {
 		auto res = ToSubdomains(octree.root());
 		EXPECT_EQ(1, res.size());
 		EXPECT_EQ(Subdomain(iPoint3D(1, 1, 1), iPoint3D(2, 2, 2), 2), res[0]);
+	}
+}
+
+TEST(SubdomainConversion, TShapeGeometry) {
+	Geometry<float> geometry;
+	double voxel_size = 1.0 / 100.0;
+	readSTL(geometry, "t_shape.stl");
+	geometry.scaleTo(1.0);
+
+	FlushFluidCache();
+	Octree octree(0);
+	voxelize(geometry, octree, voxel_size, kFluid, kWall);
+	cout  << octree.max_depth() << endl;
+
+	/*  3 2 3
+	 * |-| |-|
+	 * BBBBBBB
+	 *    B ^
+	 *    B |
+	 *    B | 8
+	 *    B v
+	 * depth = 2
+	 * heigth = 10
+	 * width = 8
+	 */
+	auto res = ToSubdomains(octree.root());
+	cout << res.size() << endl;
+	for (auto t : res) {
+		cout << t.JSON() << endl;
 	}
 }
 

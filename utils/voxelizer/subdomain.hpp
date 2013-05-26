@@ -2,6 +2,8 @@
 #define SLF_SUBDOMAIN_H 1
 
 #include <algorithm>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include <cvmlcpp/base/Matrix>
@@ -42,6 +44,17 @@ class Subdomain {
 		return this->origin_ == rhs.origin_ &&
 			this->extent_ == rhs.extent_ &&
 			this->fluid_nodes_ == rhs.fluid_nodes_;
+	}
+
+	std::string JSON() const {
+		std::ostringstream c;
+		c << "{ pos: [" << origin_.x() << ", "
+						<< origin_.y() << ", "
+						<< origin_.z() << "], "
+		  << "size: [" << extent_.x() << ", "
+		                 << extent_.y() << ", "
+					     << extent_.z() << "] }";
+		return c.str();
 	}
 
 	// Builds the union of two subdomains.

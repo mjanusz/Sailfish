@@ -15,20 +15,15 @@ ostream& operator<<(ostream& os, const Subdomain& s) {
 
 // Returns the location (origin) of a node.
 iPoint3D NodeLocation(const Octree::DNode& node) {
-	// Start with the location of the root node.
-	int h = 1 << (node.max_depth() - 1);
-	iPoint3D location(h, h, h);
+	iPoint3D location(0, 0, 0);
 
-	int shift = node.max_depth() - 2;
+	int shift = node.max_depth() - 1;
 
 	for (const Octree::index_t it : node.index_trail()) {
-		int x = (it & 4) ? 0 : -1;
-		int y = (it & 2) ? 0 : -1;
-		int z = (it & 1) ? 0 : -1;
+		int x = (it & 4) ? 1 : 0;
+		int y = (it & 2) ? 1 : 0;
+		int z = (it & 1) ? 1 : 0;
 		int dh = 1 << shift;
-		if (dh < 0) {
-			dh = 1;
-		}
 		location = location.jmp(x * dh, y * dh, z * dh);
 		shift--;
 	}
@@ -38,19 +33,16 @@ iPoint3D NodeLocation(const Octree::DNode& node) {
 
 iPoint3D NodeExtent(const Octree::DNode& node) {
 	// Start with the extent of the root node.
-	int h = 1 << (node.max_depth() - 1);
+	int h = 1 << node.max_depth();
 	iPoint3D extent(h, h, h);
 
-	int shift = node.max_depth() - 2;
+	int shift = node.max_depth() - 1;
 
 	for (const Octree::index_t it : node.index_trail()) {
-		int x = (it & 4) ? 1 : 0;
-		int y = (it & 2) ? 1 : 0;
-		int z = (it & 1) ? 1 : 0;
+		int x = (it & 4) ? 0 : -1;
+		int y = (it & 2) ? 0 : -1;
+		int z = (it & 1) ? 0 : -1;
 		int dh = 1 << shift;
-		if (dh < 0) {
-			dh = 1;
-		}
 		extent = extent.jmp(x * dh, y * dh, z * dh);
 		shift--;
 	}

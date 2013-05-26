@@ -27,17 +27,22 @@ Octree MakeTestTree() {
 TEST(DTreeNode, NodeLocation) {
 	Octree octree = MakeTestTree();
 
-	EXPECT_EQ(iPoint3D(2, 2, 2), NodeLocation(octree.root()));
-	EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0]));
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()));
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0]));
 	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0][0]));
+
+	EXPECT_EQ(iPoint3D(1, 0, 0), NodeLocation(octree.root()[0][4]));
+	EXPECT_EQ(iPoint3D(1, 0, 1), NodeLocation(octree.root()[0][5]));
+	EXPECT_EQ(iPoint3D(1, 1, 0), NodeLocation(octree.root()[0][6]));
+	EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0][7]));
 }
 
 TEST(DTreeNode, NodeExtent) {
 	Octree octree = MakeTestTree();
 
-	EXPECT_EQ(iPoint3D(2, 2, 2), NodeLocation(octree.root()));
-	EXPECT_EQ(iPoint3D(0, 0, 0), NodeExtent(octree.root()[0][0]));
+	EXPECT_EQ(iPoint3D(3, 3, 3), NodeExtent(octree.root()));
 	EXPECT_EQ(iPoint3D(1, 1, 1), NodeExtent(octree.root()[0]));
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeExtent(octree.root()[0][0]));
 }
 
 /*

@@ -49,14 +49,22 @@ class Subdomain {
 		return result;
 	}
 
+	int len() const {
+		return (extent_.x() - origin_.x() + 1);
+	}
+
 	// Returns the number of nodes contained within the subdomain.
-	int volume() {
+	int volume() const {
 		return (extent_.x() - origin_.x() + 1) *
 			   (extent_.y() - origin_.y() + 1) *
 			   (extent_.z() - origin_.z() + 1);
 	}
 
-	double fill_fraction() {
+	int fluid_nodes() const {
+		return fluid_nodes_;
+	}
+
+	double fill_fraction() const {
 		return static_cast<double>(fluid_nodes_) / volume();
 	}
 

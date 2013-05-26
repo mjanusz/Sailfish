@@ -106,18 +106,34 @@ vector<Subdomain> ToSubdomains(const Octree::DNode node) {
 	for (int i = 0; i < Octree::N; i++) {
 		auto tmp = ToSubdomains(node[i]);
 
-		for (auto t : tmp) {
+		for (auto& t : tmp) {
 			bool merged = false;
-			for (auto child : children) {
+			vector<Subdomain> merged_s;
+			double max_fill = 0.0;
+			int max_idx = 0;
+			Subdomain* max_repl;
+
+			for (auto& child : children) {
 				auto h = t + child;
-				if (h.fill_fraction() < kMinFillFraction) {
+				if (h.fill_fraction() > kMinFillFraction) {
 					merged = true;
 					child = h;
 					break;
+				} else if (h.len() < 32) {
+					merged_s.push_back(h);
+					if (h.fill_fraction() > max_fill) {
+						max_fill = h.fill_fraction();
+						max_idx = merged_s.size() - 1;
+						max_repl = &child;
+					}
 				}
 			}
 			if (!merged) {
-				children.push_back(t);
+				if (merged_s.size() > 0) {
+					*max_repl = *max_repl + t;
+				} else {
+					children.push_back(t);
+				}
 			}
 		}
 	}

@@ -61,10 +61,16 @@ int main(int argc, char **argv)
 	return 0;
 */
 	auto subs = ToSubdomains(octree.root());
+	int total_vol = 0;
+	int fluid_vol = 0;
 
 	for (auto& s : subs) {
-		cout << s << endl;
+		cout << s << " " << s.volume() << " " << s.fill_fraction() << endl;
+		total_vol += s.volume();
+		fluid_vol += s.fluid_nodes();
 	}
+
+	cout << total_vol << " " << fluid_vol << " " << static_cast<double>(fluid_vol) / total_vol << endl;
 
 	/*
 	int fluid = count(voxels.begin(), voxels.end(), 0);

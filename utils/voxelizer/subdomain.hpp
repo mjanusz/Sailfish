@@ -19,6 +19,10 @@ iPoint3D NodeLocation(const Octree::DNode& node);
 iPoint3D NodeExtent(const Octree::DNode& node);
 int CountFluidNodes(const Octree::DNode& node);
 void RemoveEmptyAreas(Octree::DNode node);
+void FlushFluidCache();
+
+extern const char kFluid;
+extern const char kWall;
 
 class Subdomain {
   public:
@@ -33,6 +37,12 @@ class Subdomain {
 	Subdomain(const Octree::DNode node):
 		origin_(NodeLocation(node)), extent_(NodeExtent(node)),
 		fluid_nodes_(CountFluidNodes(node)) {};
+
+	bool operator==(const Subdomain& rhs) const {
+		return this->origin_ == rhs.origin_ &&
+			this->extent_ == rhs.extent_ &&
+			this->fluid_nodes_ == rhs.fluid_nodes_;
+	}
 
 	// Builds the union of two subdomains.
 	const Subdomain operator+(const Subdomain& rhs) const {

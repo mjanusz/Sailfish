@@ -97,6 +97,33 @@ void RemoveEmptyAreas(Octree::DNode node) {
 	}
 }
 
+vector<Subdomain> MergeSubdomains(vector<Subdomain> a, vector<Subdomain> b) {
+	vector<Subdomain> ret;
+
+	for (int i = 0; i < a.size(); i++) {
+		double max_fraction = 0.0;
+		int max_j = -1;
+
+		for (int j = 0; j < b.size(); j++) {
+			auto h = a[i] + b[j];
+			if (h.fill_fraction() > max_fraction) {
+				max_j = j;
+				max_fraction = h.fill_fraction();
+			}
+		}
+
+		if (max_fraction >= kMinFillFraction) {
+			ret.push_back(a[i] + b[max_j]);
+			b.erase(b.begin() + max_j);
+		} else {
+			ret.push_back(a[i]);
+		}
+	}
+
+	ret.insert(ret.end(), b.begin(), b.end());
+	return ret;
+}
+
 vector<Subdomain> ToSubdomains(const Octree::DNode node) {
 	if (node.isLeaf()) {
 		if (CountFluidNodes(node) == 0) {
@@ -106,52 +133,14 @@ vector<Subdomain> ToSubdomains(const Octree::DNode node) {
 		}
 	}
 
-	vector<Subdomain> children;
+	auto p1 = MergeSubdomains(ToSubdomains(node[0]), ToSubdomains(node[1]));
+	auto p2 = MergeSubdomains(ToSubdomains(node[2]), ToSubdomains(node[3]));
+	auto p3 = MergeSubdomains(ToSubdomains(node[4]), ToSubdomains(node[5]));
+	auto p4 = MergeSubdomains(ToSubdomains(node[6]), ToSubdomains(node[7]));
 
-	for (int i = 0; i < Octree::N; i++) {
-		auto tmp = ToSubdomains(node[i]);
-		for (auto& t : tmp) {
-			bool merged = false;
-			vector<Subdomain> merged_s;
-			double max_fill = 0.0;
-			int max_idx = 0;
-			Subdomain* max_repl;
+	auto p5 = MergeSubdomains(p1, p2);
+	auto p6 = MergeSubdomains(p3, p4);
 
-			for (auto& child : children) {
-				if (child.contains(t)) {
-					child.add_fluid(t.fluid_nodes());
-					merged = true;
-					break;
-				}
-			}
-			if (!merged) {
-				for (auto& child : children) {
-					auto h = t + child;
-					if (h.fill_fraction() > kMinFillFraction) {
-						merged = true;
-						child = h;
-						break;
-					} else if (h.len() < 32) {
-						merged_s.push_back(h);
-						if (h.fill_fraction() > max_fill) {
-							max_fill = h.fill_fraction();
-							max_idx = merged_s.size() - 1;
-							max_repl = &child;
-						}
-					}
-				}
-			}
-			if (!merged) {
-//				if (merged_s.size() > 0) {
-//					*max_repl = *max_repl + t;
-//				} else {
-					children.push_back(t);
-//				}
-			}
-		}
-
-	}
-
-	return children;
+	return MergeSubdomains(p5, p6);
 }
 

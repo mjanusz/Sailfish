@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 	int fluid_vol = 0;
 
 	for (auto& s : subs) {
-		cout << s << " " << s.volume() << " " << s.fill_fraction() << endl;
+		cout << s.JSON() << " " << s.volume() << " " << s.fill_fraction() << endl;
 		total_vol += s.volume();
 		fluid_vol += s.fluid_nodes();
 	}

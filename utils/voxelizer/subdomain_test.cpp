@@ -97,7 +97,7 @@ TEST(SubdomainConversion, SingleSubdomain) {
 
 TEST(SubdomainConversion, TShapeGeometry) {
 	Geometry<float> geometry;
-	double voxel_size = 1.0 / 9.0;
+	double voxel_size = 1.0 / 64.0;
 	readSTL(geometry, "t_shape.stl");
 	geometry.scaleTo(1.0);
 

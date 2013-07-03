@@ -4,7 +4,7 @@
 %>
 
 <%namespace file="code_common.mako" import="*"/>
-<%namespace file="propagation.mako" import="rel_offset,get_odist"/>
+<%namespace file="propagation.mako" import="rel_offset,get_odist,set_odist"/>
 <%namespace file="utils.mako" import="*"/>
 <%namespace file="kernel_common.mako" import="*" name="kernel_common"/>
 
@@ -577,7 +577,7 @@ ${device_func} inline void postcollisionBoundaryConditions(
 
 ${device_func} inline void precollisionBoundaryConditions(Dist *fi, int ncode,
 		int node_type, int orientation, float *rho, float *v0
-		${', ' + global_ptr + 'float *dist_out, int gi' if access_pattern == 'AA' and nt.NTDoNothing in node_types else ''}
+		${', ' + global_ptr + 'float *dist_out, int gi' + (', %s const int *nodes, int dense_gi' % global_ptr if node_addressing == 'indirect'  else '') if access_pattern == 'AA' and nt.NTDoNothing in node_types else ''}
 		${iteration_number_if_required()})
 {
 	if (0) {}
@@ -662,8 +662,9 @@ ${device_func} inline void precollisionBoundaryConditions(Dist *fi, int ncode,
 							if (iteration_number & 1) {
 								${get_odist('dist_out', dist_idx)} = fi->${grid.idx_name[dist_idx]};
 							} else {
-								${get_odist('dist_out', grid.idx_opposite[dist_idx],
-											*grid.basis[grid.idx_opposite[dist_idx]])} = fi->${grid.idx_name[dist_idx]};
+								${set_odist('dist_out', grid.idx_opposite[dist_idx],
+										*grid.basis[grid.idx_opposite[dist_idx]],
+										rhs='fi->%s' % grid.idx_name[dist_idx])};
 							}
 						%endfor
 						break;

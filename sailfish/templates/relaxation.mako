@@ -104,7 +104,8 @@ ${device_func} inline void ELBM_relaxate(${bgk_args_decl()}, Dist* d0
 %for grid_idx in range(len(grids)):
 ${device_func} inline void BGK_relaxate${grid_idx}(${bgk_args_decl(grid_idx)},
 	Dist *d0, int node_type, int ncode
-	${dynamic_val_args_decl()})
+	${dynamic_val_args_decl()}
+	${force_field_if_required()})
 {
 	${body_force(grid_idx)}
 	${bgk_relaxation_preamble(grid_idx)}

@@ -7,6 +7,10 @@
 
 ## Defines the actual acceleration vectors.
 <%def name="body_force(grid_idx=0, vector_decl=True)">
+	<%
+		declared = False if vector_decl else True
+	%>
+
 	%if forces is not UNDEFINED and (forces.numeric or forces.symbolic):
 		%if sym_force.needs_accel(grid_idx, forces, {}):
 			%if forces.symbolic and time_dependence:
@@ -16,6 +20,7 @@
 			%if not sym_force.needs_coupling_accel(grid_idx, force_couplings):
 				%if vector_decl:
 					float ea${grid_idx}[${dim}];
+					<% declared = True %>
 				%endif
 				%for j in range(0, dim):
 					ea${grid_idx}[${j}] = ${cex(sym_force.body_force_accel(grid_idx, j, forces, accel=True))};
@@ -31,6 +36,23 @@
 			%endif
 		%endif
 	%endif
+
+	%if force_field:
+		%if not declared:
+			float ea${grid_idx}[${dim}] = {0.0f, 0.0f ${', 0.0f' if dim == 3 else ''}};
+			<% declared = True %>
+		%endif
+
+		%for i, suffix in zip(range(0, dim), ('x', 'y', 'z')):
+			float f${suffix} = force_${suffix}[gi];
+			if (f${suffix} != 0.0f) {
+				// Clear force for next iteration.
+				force_${suffix}[gi] = 0.0f;
+				ea${grid_idx}[${i}] += f${suffix};
+			}
+		%endfor
+	%endif
+
 </%def>
 
 <%def name="guo_force(i, subs)">

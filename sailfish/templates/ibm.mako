@@ -1,10 +1,12 @@
 ## Code supporting the immersed bondary method.
+<%namespace file="utils.mako" import="*"/>
+<%namespace file="kernel_common.mako" import="kernel_args_1st_moment" />
 
 // Interpolates fluid velocity and updates particle positions.
 ${kernel} void UpdateParticlePosition(
 		${kernel_args_1st_moment('fluid_v')}
 		${kernel_args_1st_moment('r')}
-		const int num_partciles) {
+		const int num_particles) {
 	// Particle ID.
 	int pid = get_global_id(0);
 	if (pid >= num_particles) {
@@ -13,33 +15,35 @@ ${kernel} void UpdateParticlePosition(
 
 	float lrx = rx[pid];
 	float lry = ry[pid];
-	${'float lrz = rz[pid];' if dim == 3 else ''}
+	${ifdim3('float lrz = rz[pid];')}
 
-	int xmin = lrx - 0.5f;
-	int ymin = lry - 0.5f;
-	int zmin = lrz - 0.5f;
+	int xmin = lrx;
+	int ymin = lry;
+	${ifdim3('int zmin = lrz;')}
 
 	// Particle velocity.
-	float lvx = 0.0f, lvy = 0.0f, lvz = 0.0f;
+	float lvx = 0.0f, lvy = 0.0f${ifdim3(', lvz = 0.0f')};
 
-	for (int z = zmin; z < zmin + 1; z++) {
-		for (int y = ymin; y < ymin + 1; y++) {
-			for (int x = xmin; x < xmin + 1; x++) {
-				float dx = fabsf(lrx - x - 0.5f);
-				float dy = fabsf(lry - y - 0.5f);
-				float dz = fabsf(lrz - z - 0.5f);
-				float w = (1.0f - dx) * (1.0f - dy) * (1.0f - dz);
-				int idx = getGlobalIdx(x, y, z);
+	// \phi_2 kernel: 1 - |x| for |x| <= 1.
+	${ifdim3('for (int z = zmin; z < zmin + 1; z++)')}
+	{
+		for (int y = ymin; y <= ymin + 1; y++) {
+			for (int x = xmin; x <= xmin + 1; x++) {
+				float dx = fabsf(lrx - x);
+				float dy = fabsf(lry - y);
+				${ifdim3('float dz = fabsf(lrz - z);')}
+				float w = (1.0f - dx) * (1.0f - dy) ${ifdim3('* (1.0f - dz)')};
+				int idx = getGlobalIdx(x, y ${ifdim3(', z')});
 				lvx += fluid_vx[idx] * w;
 				lvy += fluid_vy[idx] * w;
-				lvz += fluiid_vz[idx] * w;
+				${ifdim3('lvz += fluid_vz[idx] * w;')}
 			}
 		}
 	}
 
 	rx[pid] = lrx + lvx;
 	ry[pid] = lry + lvy;
-	${'rz[pid] = lrz + lvz;' if dim == 3 else ''}
+	${ifdim3('rz[pid] = lrz + lvz;')}
 }
 
 // Generate particle forces.
@@ -56,38 +60,33 @@ ${kernel} void SpreadParticleForcesStiff(
 		return;
 	}
 
-	const float radius = 10.0f;
-	float volume = 4.0f/3.0f * M_PI * radius * radius * radius;
-
 	float lrx = rx[pid];
 	float lry = ry[pid];
 	${'float lrz = rz[pid];' if dim == 3 else ''}
 
 	float lref_x = refx[pid];
 	float lref_y = refy[pid];
-	float lref_z = refz[pid];
+	${'float lref_z = refz[pid];' if dim == 3 else ''}
 
 	float lstiffness = stiffness[pid];
 
-	int xmin = lrx - 0.5f;
-	int ymin = lry - 0.5f;
-	int zmin = lrz - 0.5f;
+	int xmin = lrx;
+	int ymin = lry;
+	${'int zmin = lrz;' if dim == 3 else ''}
 
-	// Particle velocity.
-	float lvx = 0.0f, lvy = 0.0f, lvz = 0.0f;
-
-	for (int z = zmin; z < zmin + 1; z++) {
-		for (int y = ymin; y < ymin + 1; y++) {
-			for (int x = xmin; x < xmin + 1; x++) {
-				float dx = fabsf(lrx - x - 0.5f);
-				float dy = fabsf(lry - y - 0.5f);
-				float dz = fabsf(lrz - z - 0.5f);
-				float w = (1.0f - dx) * (1.0f - dy) * (1.0f - dz);
-				int idx = getGlobalIdx(x, y, z);
+	${'for (int z = zmin; z < zmin + 1; z++)' if dim == 3 else ''}
+	{
+		for (int y = ymin; y <= ymin + 1; y++) {
+			for (int x = xmin; x <= xmin + 1; x++) {
+				float dx = fabsf(lrx - x);
+				float dy = fabsf(lry - y);
+				${'float dz = fabsf(lrz - z)' if dim == 3 else ''};
+				float w = (1.0f - dx) * (1.0f - dy) ${'* (1.0f - dz)' if dim == 3 else ''};
+				int idx = getGlobalIdx(x, y${ifdim3(', z')});
 				// Assumes particles forces do not overlap.
-				force[idx] = -lstiffness * (rx[idx] - lref_x) * volume;
-				force[idx] = -lstiffness * (ry[idx] - lref_y) * volume;
-				force[idx] = -lstiffness * (rz[idx] - lref_z) * volume;
+				forcex[idx] += -lstiffness * (lrx - lref_x) * w;
+				forcey[idx] += -lstiffness * (lry - lref_y) * w;
+				${'forcez[idx] += -lstiffness * (lrz - lref_z) * w' if dim == 3 else ''};
 			}
 		}
 	}

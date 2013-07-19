@@ -64,6 +64,7 @@ class CylinderSimulation(LBFluidSim, LBForcedSim):
         defaults.update({
             'lat_nx': 256,
             'lat_ny': 256,
+            'perf_stats_every': 500,
             'visc': 0.1})
 
 

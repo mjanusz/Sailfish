@@ -26,27 +26,6 @@
 	%endif
 </%def>
 
-## TODO(michalj): Consider using only a single float field for this with a
-## known offset to minimize number of arguments.
-<%def name="force_field_if_required()">
-	%if force_field:
-		, ${global_ptr} float *__restrict__ force_x
-		, ${global_ptr} float *__restrict__ force_y
-		%if dim == 3:
-			, ${global_ptr} float *__restrict__ force_z
-		%endif
-	%endif
-</%def>
-
-<%def name="force_field_arg_if_required()">
-	%if force_field:
-		, force_x, force_y
-		%if dim == 3:
-			, force_z
-		%endif
-	%endif
-</%def>
-
 <%def name="scratch_space_if_required()">
 	%if scratch_space:
 		, ${global_ptr} float *__restrict__ node_scratch_space
@@ -174,6 +153,13 @@
 			${'ovz[gi] = v[2]' if dim == 3 else ''};
 		%endif
 	}
+	%if force_field and not initialization:
+		else {
+			ovx[gi] = v[0];
+			ovy[gi] = v[1];
+			${'ovz[gi] = v[2]' if dim == 3 else ''};
+		}
+	%endif
 </%def>
 
 ## Defines local indices for bulk kernels.

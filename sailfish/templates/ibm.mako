@@ -84,9 +84,9 @@ ${kernel} void SpreadParticleForcesStiff(
 				float w = (1.0f - dx) * (1.0f - dy) ${'* (1.0f - dz)' if dim == 3 else ''};
 				int idx = getGlobalIdx(x, y${ifdim3(', z')});
 				// Assumes particles forces do not overlap.
-				forcex[idx] += -lstiffness * (lrx - lref_x) * w;
-				forcey[idx] += -lstiffness * (lry - lref_y) * w;
-				${'forcez[idx] += -lstiffness * (lrz - lref_z) * w' if dim == 3 else ''};
+				atomicAdd(forcex + idx, -lstiffness * (lrx - lref_x) * w);
+				atomicAdd(forcey + idx, -lstiffness * (lry - lref_y) * w);
+				${'atomicAdd(forcez + idx, -lstiffness * (lrz - lref_z) * w);' if dim == 3 else ''};
 			}
 		}
 	}

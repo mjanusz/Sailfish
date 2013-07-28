@@ -25,7 +25,7 @@ class CylinderSubdomain(Subdomain2D):
         cx = 0.25 * self.config.lat_nx
         cy = 0.5 * self.config.lat_ny
         r = 10
-        N = 40 #36
+        N = 100 #36
 
         for i in range(0, N):
             x = cx + r * math.cos(i / float(N) * 2.0 * math.pi)
@@ -43,12 +43,40 @@ class CylinderSimulation(LBIBMFluidSim):
             'lat_ny': 128,
             #'periodic_x': True,
             'visc': 0.01,
-            'perf_stats_every': 500,})
+            'perf_stats_every': 500,
+        })
 
     def __init__(self, config):
         super(CylinderSimulation, self).__init__(config)
         self.add_body_force((1e-7, 0.0))
 
+    def after_step(self, runner):
+        every = 20
+        mod = self.iteration % every
+
+        if mod == every - 1:
+            self.need_sync_flag = True
+        elif mod == 0:
+            print self.iteration, self.vy[self.config.lat_ny / 2, self.config.lat_nx * 0.75]
+
+        # TODO: compare against Lattice Boltzmann method on a curvilinear
+        # coordinate system: Vortex shedding behind a circular cylinder
+        # for Re = 50, 100, 150
+
+
+        # meausure frequency: plot(np.fft.fftfreq(stat[:,1].size, d=20)[:100],
+        # np.abs(np.fft.rfft(stat[:,1]))[:100])
+        # find top peak, corresponding x value is freq (1/T)
+
+        # Due to the alternating vortex wake (“Karman street”) the
+        #oscillations in lift force occur at the vortex shedding frequency
+        #and oscillations in drag force occur at twice the vortex
+        #shedding frequency.
+
+        #  Re 40 - 150: Laminar vortex street
+        # < 3 e5: laminar boundary layer, turbulent wake
+        # < 3.5e6 bounary layer transition to turbulent
+        # > 3.5e6 tubulent vortex street
 
 if __name__ == '__main__':
     ctrl = LBSimulationController(CylinderSimulation)

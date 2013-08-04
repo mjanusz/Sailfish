@@ -53,7 +53,36 @@ class ChannelSubdomain(Subdomain3D):
 
     def initial_conditions(self, sim, hx, hy, hz):
         sim.rho[:] = 1.0
+        self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
 
+    def make_gradients(self, NX, NY, NZ):
+        # Buffer size (used to make the random perturbation continuous
+        # along the streamwise direction.
+        B = 40
+        hB = B / 2
+
+        n1 = np.random.random((NZ + B, NY + B, NX)).astype(np.float32) * 2.0 - 1.0
+        # Make the field continous along the streamwise and spanwise direction.
+        n1[-hB:,:,:] = n1[hB:B,:,:]
+        n1[:hB,:,:] = n1[-B:-hB,:,:]
+
+        n1[:,-hB:,:] = n1[:,hB:B,:]
+        n1[:,:hB,:] = n1[:,-B:-hB,:]
+
+        nn1 = scipy.ndimage.filters.gaussian_filter(n1, 5)
+        # Remove the buffer layer.
+        return [x[hB:-hB,hB:-hB,:] for x in np.gradient(nn1)]
+
+    def select_subdomain(self, field, hx, hy, hz):
+        # Determine subdomain span.
+        x0, x1 = np.min(hx), np.max(hx)
+        y0, y1 = np.min(hy), np.max(hy)
+        z0, z1 = np.min(hz), np.max(hz)
+        return field[z0:z1+1, y0:y1+1, x0:x1+1]
+
+    # TODO: With these initial conditions, there are still waves generated
+    # at the walls.
+    def set_profile(self, sim, hx, hy, hz, NX, NY, NZ):
         hhx = np.abs(hx - self.wall_bc.location - H)
         # Sanity checks.
         assert np.all((H - hhx)[hx == 0] == -self.wall_bc.location)
@@ -67,38 +96,15 @@ class ChannelSubdomain(Subdomain3D):
         u[y_plus < y0] = y_plus[y_plus < y0] * u_tau
         sim.vz[:] = u
 
-        # Determine subdomain span.
-        x0, x1 = np.min(hx), np.max(hx)
-        y0, y1 = np.min(hy), np.max(hy)
-        z0, z1 = np.min(hz), np.max(hz)
-
-        # Buffer size (used to make the random perturbation continuous
-        # along the streamwise direction.
-        B = 40
-        hB = B / 2
-
-        def _make_gradients():
-            n1 = np.random.random((NZ + B, NY, NX)).astype(np.float32) * 2.0 - 1.0
-            # Make the field continous along the streamwise direction.
-            n1[-hB:,:,:] = n1[hB:B,:,:]
-            n1[:hB,:,:] = n1[-B:-hB,:,:]
-            nn1 = scipy.ndimage.filters.gaussian_filter(n1, 5)
-            return np.gradient(nn1)
-
         np.random.seed(11341351351)
-        _, dy1, dz1 = _make_gradients()
-        dx2, _, dz2 = _make_gradients()
-        dx3, dy3, _ = _make_gradients()
+        _, dy1, dz1 = self.make_gradients(NX, NY, NZ)
+        dx2, _, dz2 = self.make_gradients(NX, NY, NZ)
+        dx3, dy3, _ = self.make_gradients(NX, NY, NZ)
 
         # Compute curl of the random field.
         dvx = dy3 - dz2
         dvy = dz1 - dx3
         dvz = dx2 - dy1
-
-        # Remove the buffer layer.
-        dvx = dvx[hB:-hB,:,:]
-        dvy = dvy[hB:-hB,:,:]
-        dvz = dvz[hB:-hB,:,:]
 
         assert np.sum(np.isnan(dvx)) == 0
         assert np.sum(np.isnan(dvy)) == 0
@@ -107,9 +113,9 @@ class ChannelSubdomain(Subdomain3D):
         scale = np.max([np.max(np.abs(dvx)), np.max(np.abs(dvy)), np.max(np.abs(dvz))])
 
         # Select the right part of the random field for this subdomain.
-        dvx = dvx[z0:z1+1, y0:y1+1, x0:x1+1]
-        dvy = dvy[z0:z1+1, y0:y1+1, x0:x1+1]
-        dvz = dvz[z0:z1+1, y0:y1+1, x0:x1+1]
+        dvx = self.select_subdomain(dvx, hx, hy, hz)
+        dvy = self.select_subdomain(dvy, hx, hy, hz)
+        dvz = self.select_subdomain(dvz, hx, hy, hz)
 
         # Add random perturbation to the initial flow field. The numerical
         # factor determines the largest perturbation value. We also force
@@ -145,7 +151,6 @@ class ChannelSim(LBFluidSim, LBForcedSim, ReynoldsStatsMixIn, Vis2DSliceMixIn):
             'perf_stats_every': 5000,
             'periodic_y': True,
             'periodic_z': True,
-            'subdomains': 2,
             })
 
     def __init__(self, config):

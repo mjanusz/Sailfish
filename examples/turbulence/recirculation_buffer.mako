@@ -37,33 +37,37 @@ ${kernel} void CopyDataFromRecirculationBuffer(
 	// This has to be the opposite to what happens in the propagation step,
 	// as this kernel is called with an updated time step (one step ahead of
 	// the iteration number in the propagation step).
-	if ((iteration_number & 1) == 0) {
-		%for i, dname in enumerate(grid.idx_name):
-			fi.${dname} = ${get_dist_other('dist_in', i, 'gi')};
-			if (!isfinite(fi.${dname})) {
-				printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
-				die();
-			}
-		%endfor
-	} else {
-		%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
-			fi.${dname} = ${get_dist_other('dist_in', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))};
-			if (!isfinite(fi.${dname})) {
-				printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
-				die();
-			}
-		%endfor
-	}
+	%if access_pattern == 'AA':
+		if ((iteration_number & 1) == 0) {
+			%for i, dname in enumerate(grid.idx_name):
+				fi.${dname} = ${get_dist_other('dist_in', i, 'gi')};
+				if (!isfinite(fi.${dname})) {
+					printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
+					die();
+				}
+			%endfor
+		} else {
+			%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
+				fi.${dname} = ${get_dist_other('dist_in', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))};
+				if (!isfinite(fi.${dname})) {
+					printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
+					die();
+				}
+			%endfor
+		}
+	%endif
 
 	gi = getGlobalIdx(gx, gy, 1);
 
-	if ((iteration_number & 1) == 0) {
-		${propagate_inplace('dist_out', 'fi')}
-	} else {
-		%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
-			${get_dist('dist_out', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))} = fi.${dname};
-		%endfor
-	}
+	%if access_pattern == 'AA':
+		if ((iteration_number & 1) == 0) {
+			${propagate_inplace('dist_out', 'fi')}
+		} else {
+			%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
+				${get_dist('dist_out', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))} = fi.${dname};
+			%endfor
+		}
+	%endif
 }
 
 // Code to collect data and distribute data between the recirculation buffer
@@ -90,10 +94,28 @@ ${kernel} void CollectDataFromRecirculationBuffer(
 	// recirculation buffer (and so is any padding).
 	int gi = getGlobalIdx(gx, gy, z);
 	Dist fi;
-	// This has to be the opposite to what happens in the propagation step,
-	// as this kernel is called with an updated time step (one step ahead of
-	// the iteration number in the propagation step).
-	if ((iteration_number & 1) == 1) {
+	%if access_pattern == 'AA':
+		// This has to be the opposite to what happens in the propagation step,
+		// as this kernel is called with an updated time step (one step ahead of
+		// the iteration number in the propagation step).
+		if ((iteration_number & 1) == 1) {
+			%for i, dname in enumerate(grid.idx_name):
+				fi.${dname} = ${get_dist('dist_in', i, 'gi')};
+				if (!isfinite(fi.${dname})) {
+					printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
+					die();
+				}
+			%endfor
+		} else {
+			%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
+				fi.${dname} = ${get_dist('dist_in', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))};
+				if (!isfinite(fi.${dname})) {
+					printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
+					die();
+				}
+			%endfor
+		}
+	%else:
 		%for i, dname in enumerate(grid.idx_name):
 			fi.${dname} = ${get_dist('dist_in', i, 'gi')};
 			if (!isfinite(fi.${dname})) {
@@ -101,15 +123,7 @@ ${kernel} void CollectDataFromRecirculationBuffer(
 				die();
 			}
 		%endfor
-	} else {
-		%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
-			fi.${dname} = ${get_dist('dist_in', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))};
-			if (!isfinite(fi.${dname})) {
-				printf("invalid distribution: %f @ %d, %d\n", fi.${dname}, gx, gy);
-				die();
-			}
-		%endfor
-	}
+	%endif
 
 	%for i, dname in enumerate(grid.idx_name):
 		dist_out[${buf_index(i)}] = fi.${dname};
@@ -138,17 +152,26 @@ ${kernel} void DistributeDataFromRecirculationBuffer(
 		}
 	%endfor
 
-	if ((iteration_number & 1) == 0) {
+	%if access_pattern == 'AA':
+		if ((iteration_number & 1) == 0) {
+			%for i, dname in enumerate(grid.idx_name):
+				%if grid.basis[i][2] == 1:
+					${get_dist('dist_out', i, 'gi')} = fi.${dname};
+				%endif
+			%endfor
+		} else {
+			%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
+				%if grid.basis[i][2] == 1:
+					${get_dist('dist_out', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))} = fi.${dname};
+				%endif
+			%endfor
+		}
+	%else:
 		%for i, dname in enumerate(grid.idx_name):
 			%if grid.basis[i][2] == 1:
 				${get_dist('dist_out', i, 'gi')} = fi.${dname};
 			%endif
 		%endfor
-	} else {
-		%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
-			%if grid.basis[i][2] == 1:
-				${get_dist('dist_out', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))} = fi.${dname};
-			%endif
-		%endfor
-	}
+	%endif
+
 }

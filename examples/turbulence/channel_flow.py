@@ -80,14 +80,11 @@ class ChannelSubdomain(Subdomain3D):
         z0, z1 = np.min(hz), np.max(hz)
         return field[z0:z1+1, y0:y1+1, x0:x1+1]
 
-    # TODO: With these initial conditions, there are still waves generated
-    # at the walls.
-    def set_profile(self, sim, hx, hy, hz, NX, NY, NZ):
+    def set_profile(self, sim, hx, hy, hz, NX, NY, NZ, pert=0.03):
         hhx = np.abs(hx - self.wall_bc.location - H)
+        y_plus = (H - hhx) * u_tau / visc
         # Sanity checks.
         assert np.all((H - hhx)[hx == 0] == -self.wall_bc.location)
-
-        y_plus = (H - hhx) * u_tau / visc
         # Log-law.
         u = (1/0.41 * np.log(y_plus) + 5.5) * u_tau
         # Linear scaling close to the wall. y0 is chosen to make
@@ -121,9 +118,9 @@ class ChannelSubdomain(Subdomain3D):
         # factor determines the largest perturbation value. We also force
         # the perturbations to be smaller close to the wall in the wall-normal
         # direction.
-        sim.vx[:] += dvx / scale * 0.05 * u / u0
-        sim.vy[:] += dvy / scale * 0.05
-        sim.vz[:] += dvz / scale * 0.05  # streamwise
+        sim.vx[:] += dvx / scale * pert * u / u0
+        sim.vy[:] += dvy / scale * pert
+        sim.vz[:] += dvz / scale * pert  # streamwise
 
 
 class ChannelSim(LBFluidSim, LBForcedSim, ReynoldsStatsMixIn, Vis2DSliceMixIn):

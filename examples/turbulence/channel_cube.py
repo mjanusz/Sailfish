@@ -31,7 +31,7 @@ import math
 import tempfile
 import zmq
 import numpy as np
-from sailfish.node_type import NTHalfBBWall, NTDoNothing
+from sailfish.node_type import NTHalfBBWall, NTDoNothing, NTCopy
 from sailfish.geo import LBGeometry3D
 from sailfish.controller import LBSimulationController, GeometryError
 from sailfish.subdomain import Subdomain3D, SubdomainSpec3D
@@ -106,9 +106,9 @@ class CubeChannelGeometry(LBGeometry3D):
 
 class CubeChannelSubdomain(ChannelSubdomain):
     def boundary_conditions(self, hx, hy, hz):
-        outlet_map = (hz == self.gz - 1) # & np.logical_not(wall_map)
+        wall_map = (((hx == 0) | (hx == self.gx - 1))) #& np.logical_not(outlet_map)
+        outlet_map = (hz == self.gz - 1) & np.logical_not(wall_map)
         # Channel walls.
-        wall_map = (((hx == 0) | (hx == self.gx - 1))) & np.logical_not(outlet_map)
         self.set_node(wall_map, NTHalfBBWall)
 
         # Cube.
@@ -117,19 +117,22 @@ class CubeChannelSubdomain(ChannelSubdomain):
                     (hy >= 2.7 * h) & (hy < 3.7 * h))
         #self.set_node(cube_map, NTHalfBBWall)
 
-        outlet_map = (hz == self.gz - 1) # & np.logical_not(wall_map)
-        self.set_node(outlet_map, NTDoNothing)
+        self.set_node(outlet_map, NTCopy)
 
     def initial_conditions(self, sim, hx, hy, hz):
         sim.rho[:] = 1.0
-        self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
+        if self.spec.id == 0:
+            self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
+        else:
+            self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
 
-    def make_gradients(sekf, NX, NY, NZ):
+
+    def make_gradients(self, NX, NY, NZ):
         B = 40
         hB = B / 2
 
         n1 = np.random.random((NZ + B, NY + B, NX)).astype(np.float32) * 2.0 - 1.0
-        # Make the field continous along the streamwise and spanwise direction.
+        # Make the field continuous along the streamwise and spanwise direction.
         n1[-B:,:,:] = n1[:B,:,:]
         n1[BUF_LEN:(BUF_LEN+B),:,:] = n1[:B,:,:]
 
@@ -165,12 +168,17 @@ class CubeSubdomainRunner(SubdomainRunner):
             self._sim._recv_recirc_buf[:] = np.frombuffer(buffer(msg), dtype=np.float32)
             self.backend.to_buf(self._sim._gpu_recv_recirc_buf)
             self.backend.sync_stream(self._data_stream, self._calc_stream)
-            self.backend.run_kernel(self._sim._recv_recirc_kernel,
-                                    [(NX + 2 + 127) / 128, NY + 2])
+            if self._sim.iteration & 1:
+              self.backend.run_kernel(self._sim._recv_recirc_kernel_b,
+                                        [(NX + 2 + 127) / 128, NY + 2])
+            else:
+              self.backend.run_kernel(self._sim._recv_recirc_kernel_a,
+                                        [(NX + 2 + 127) / 128, NY + 2])
         elif self._spec.id == 0:
             assert self._sim._recirculation_sock.recv() == 'ready'
 
     def _recv_dists(self):
+        # Called with updated sim.iteration both on the host and on the device.
         if self._sim._recirc_direct:
             self._recv_dists_direct()
         else:
@@ -185,14 +193,20 @@ class CubeSubdomainRunner(SubdomainRunner):
 
     def _send_dists_indirect(self):
         if self._spec.id == 0:
-            self.backend.run_kernel(self._sim._coll_recirc_kernel,
-                                    [(NX + 2 + 127) / 128, NY + 2])
+            if self._sim.iteration & 1:
+                self.backend.run_kernel(self._sim._coll_recirc_kernel_b,
+                                        [(NX + 2 + 127) / 128, NY + 2])
+            else:
+                self.backend.run_kernel(self._sim._coll_recirc_kernel_a,
+                                        [(NX + 2 + 127) / 128, NY + 2])
+
             self.backend.from_buf(self._sim._gpu_coll_recirc_buf)
             self._sim._recirculation_sock.send(self._sim._coll_recirc_buf)
         if self._spec.id == 1:
             self._sim._recirculation_sock.send('ready')
 
     def _send_dists(self):
+        # Called with updated sim.iteration on the *host* only.
         if self._sim._recirc_direct:
             self._send_dists_direct()
         else:
@@ -236,6 +250,11 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
 
     def before_main_loop(self, runner):
         self.init_indirect(runner)
+        if runner._spec.id == 1:
+            self._ntcopy_kernel = runner.get_kernel(
+                'HandleNTCopyNodes',
+                [runner.gpu_geo_map(), runner.gpu_dist(0, 0)],
+                'PP', needs_iteration=True)
 
     def init_indirect(self, runner):
         """For copying data over the network."""
@@ -248,18 +267,26 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
             self._coll_recirc_buf = np.zeros(buf_size, dtype=np.float32)
             self._gpu_coll_recirc_buf = runner.backend.alloc_buf(like=self._coll_recirc_buf)
             self._recirculation_sock = sock
-            self._coll_recirc_kernel = runner.get_kernel(
+            self._coll_recirc_kernel_a = runner.get_kernel(
                 'CollectDataFromRecirculationBuffer',
                 [runner.gpu_dist(0, 0), self._gpu_coll_recirc_buf, BUF_LEN],
+                'PPi', needs_iteration=True)
+            self._coll_recirc_kernel_b = runner.get_kernel(
+                'CollectDataFromRecirculationBuffer',
+                [runner.gpu_dist(0, 1), self._gpu_coll_recirc_buf, BUF_LEN],
                 'PPi', needs_iteration=True)
         elif runner._spec.id == 1:
             sock.bind('ipc://%s/recirculation' % TMPDIR)
             self._recv_recirc_buf = np.zeros(buf_size, dtype=np.float32)
             self._gpu_recv_recirc_buf = runner.backend.alloc_buf(like=self._recv_recirc_buf)
             self._recirculation_sock = sock
-            self._recv_recirc_kernel = runner.get_kernel(
+            self._recv_recirc_kernel_a = runner.get_kernel(
                 'DistributeDataFromRecirculationBuffer',
                 [self._gpu_recv_recirc_buf, runner.gpu_dist(0, 0)],
+                'PP', needs_iteration=True)
+            self._recv_recirc_kernel_b = runner.get_kernel(
+                'DistributeDataFromRecirculationBuffer',
+                [self._gpu_recv_recirc_buf, runner.gpu_dist(0, 1)],
                 'PP', needs_iteration=True)
 
     def init_direct(self, runner):
@@ -284,6 +311,10 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
                 'PPii', needs_iteration=True)
 
     def after_step(self, runner):
+        if self.config.access_pattern == 'AA' and runner._spec.id == 1:
+            runner.backend.run_kernel(self._ntcopy_kernel,
+                                      [(NX + 2 + 127) / 128, NY + 2])
+
         every = 20
         mod = self.iteration % every
 

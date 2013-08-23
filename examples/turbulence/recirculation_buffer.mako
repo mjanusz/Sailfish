@@ -1,3 +1,7 @@
+<%!
+    from sailfish import sym
+%>
+
 <%namespace file="propagation.mako" import="propagate_inplace"/>
 <%namespace file="code_common.mako" import="dump_dists"/>
 <%namespace file="kernel_common.mako" import="iteration_number_arg_if_required,iteration_number_if_required,get_dist"/>
@@ -155,23 +159,51 @@ ${kernel} void DistributeDataFromRecirculationBuffer(
 	%if access_pattern == 'AA':
 		if ((iteration_number & 1) == 0) {
 			%for i, dname in enumerate(grid.idx_name):
-				%if grid.basis[i][2] == 1:
+				%if grid.basis[i][2] >= 0:
 					${get_dist('dist_out', i, 'gi')} = fi.${dname};
 				%endif
 			%endfor
 		} else {
 			%for i, (dname, ei) in enumerate(zip(grid.idx_name, grid.basis)):
-				%if grid.basis[i][2] == 1:
+				%if grid.basis[i][2] >= 0:
 					${get_dist('dist_out', grid.idx_opposite[i], 'gi', offset=rel_offset(*(-ei)))} = fi.${dname};
 				%endif
 			%endfor
 		}
 	%else:
 		%for i, dname in enumerate(grid.idx_name):
-			%if grid.basis[i][2] == 1:
+	##		%if grid.basis[i][2] == 1:
 				${get_dist('dist_out', i, 'gi')} = fi.${dname};
-			%endif
+	##		%endif
 		%endfor
 	%endif
+}
 
+${kernel} void HandleNTCopyNodes(
+	${global_ptr} int *map,
+	${global_ptr} float* dist_in
+	${iteration_number_if_required()}
+) {
+	int gx = get_global_id(0) + ${envelope_size};
+	int gy = get_global_id(1) + ${envelope_size};
+
+	if (gx >= ${lat_nx - envelope_size} || gy >= ${lat_ny - envelope_size}) {
+		return;
+	}
+
+	int gi_dst = getGlobalIdx(gx, gy, 280);
+	int gi_src = getGlobalIdx(gx, gy, 279);
+	float t;
+	// Called with an updated iteration number.
+	if ((iteration_number & 1) == 0) {
+		%for dist_idx in sym.get_missing_dists(grid, 6):
+			t = ${get_dist('dist_in', dist_idx, 'gi_src')};
+			${get_dist('dist_in', dist_idx, 'gi_dst')} = t;
+		%endfor
+	} else {
+		%for dist_idx in sym.get_missing_dists(grid, 6):
+			t = ${get_dist('dist_in', grid.idx_opposite[dist_idx], 'gi_src', offset=rel_offset(*(-grid.basis[dist_idx])))};
+			${get_dist('dist_in', grid.idx_opposite[dist_idx], 'gi_dst', offset=rel_offset(*(-grid.basis[dist_idx])))} = t;
+		%endfor
+	}
 }

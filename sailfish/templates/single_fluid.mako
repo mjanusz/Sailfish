@@ -191,6 +191,16 @@ ${kernel} void CollideAndPropagate(
 								${misc_bc_args()}
 								${scratch_space_arg_if_required()});
 
+
+		%if access_pattern == 'AB':
+			// NTCopy layer at the outlet.
+			if (gz == 280) {
+				%for dist_idx in sym.get_missing_dists(grid, 6):
+					d0.${grid.idx_name[dist_idx]} = ${get_odist('dist_in', dist_idx, *grid.dir_to_vec(6))};
+				%endfor
+			}
+		%endif
+
 		// Macroscopic quantities for the current cell
 		float g0m0, v[${dim}];
 		getMacro(&d0, ncode, type, orientation, &g0m0, v ${dynamic_val_call_args()});

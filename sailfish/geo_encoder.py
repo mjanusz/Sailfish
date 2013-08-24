@@ -47,6 +47,79 @@ class GeoEncoder(object):
             # that x < <val> always evaluates true.
             return 0xfffffffe
 
+    def tag_directions(self, tags):
+        """
+        :rvalue: True is there are any nodes supporting tagging, False otherwise
+        """
+        # For directions which are not periodic, keep the ghost nodes to avoid
+        # detecting some missing directions.
+        ngs = list(self.subdomain.spec._nonghost_slice)
+        for i, periodic in enumerate(reversed(self.subdomain.spec._periodicity)):
+            if not periodic:
+                ngs[i] = slice(None)
+
+        # Limit dry and wet types to these that are actually used in the simulation.
+        uniq_types = set(np.unique(self._type_map.base))
+        dry_types = list(set(nt.get_dry_node_type_ids()) & uniq_types)
+        wet_types = list(set(nt.get_wet_node_type_ids()) & uniq_types)
+        orient_types = list(set(nt.get_link_tag_node_type_ids()) & uniq_types)
+
+        if not orient_types:
+            return False
+
+        # Convert to a numpy array.
+        dry_types = self._type_map.dtype.type(dry_types)
+        wet_types = self._type_map.dtype.type(wet_types)
+        orient_types = self._type_map.dtype.type(orient_types)
+        orient_map = util.in_anyd_fast(self._type_map[ngs], orient_types)
+        l = self.subdomain.grid.dim - 1
+        # Skip the stationary vector.
+        for i, vec in enumerate(self.subdomain.grid.basis[1:]):
+            shifted_map = self._type_map[ngs]
+            for j, shift in enumerate(vec):
+                if shift == 0:
+                    continue
+                shifted_map = np.roll(shifted_map, int(-shift), axis=l-j)
+
+            # If the given distribution points to a fluid node, tag it as
+            # active.
+            idx = orient_map & util.in_anyd_fast(shifted_map, wet_types)
+            tags[ngs][idx] |= (1 << i)
+
+        if self.subdomain.spec.id == 1:
+            tags[-2,:,1] = tags[-10,:,1]
+            tags[-2,:,60] = tags[-10,:,60]
+
+        return True
+
+    def detect_orientation(self, orientation):
+        # Limit dry and wet types to these that are actually used in the simulation.
+        uniq_types = set(np.unique(self._type_map.base))
+        dry_types = list(set(nt.get_dry_node_type_ids()) & uniq_types)
+        orient_types = list((set(nt.get_orientation_node_type_ids()) -
+                            set(nt.get_link_tag_node_type_ids())) & uniq_types)
+
+        if not orient_types:
+            return
+
+        # Convert to a numpy array.
+        dry_types = self._type_map.dtype.type(dry_types)
+        orient_types = self._type_map.dtype.type(orient_types)
+        orient_map = util.in_anyd_fast(self._type_map, orient_types)
+        l = self.subdomain.grid.dim - 1
+        for vec in self.subdomain.grid.basis:
+            # FIXME: we currently only process the primary directions
+            if vec.dot(vec) != 1:
+                continue
+            shifted_map = self._type_map
+            for j, shift in enumerate(vec):
+                if shift == 0:
+                    continue
+                shifted_map = np.roll(shifted_map, int(-shift), axis=l-j)
+
+            # Only set orientation where it's not already defined (=0).
+            idx = orient_map & (shifted_map == 0) & (orientation == 0)
+            orientation[idx] = self.subdomain.grid.vec_to_dir(list(vec))
 
 class GeoEncoderConst(GeoEncoder):
     """Encodes node type and parameters into a single uint32.

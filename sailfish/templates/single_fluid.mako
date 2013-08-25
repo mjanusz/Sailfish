@@ -194,7 +194,7 @@ ${kernel} void CollideAndPropagate(
 
 		%if access_pattern == 'AB':
 			// NTCopy layer at the outlet.
-			if (gz == 280) {
+			if (gz == ${lat_nz-2}) {
 				%for dist_idx in sym.get_missing_dists(grid, 6):
 					d0.${grid.idx_name[dist_idx]} = ${get_odist('dist_in', dist_idx, *grid.dir_to_vec(6))};
 				%endfor

@@ -44,13 +44,13 @@ from channel_flow import ChannelSubdomain
 import scipy.ndimage.filters
 
 # Cube size.
-h = 20
+h = 30
 
 # Half-height of the channel.
 H = h * 3 / 2
 
-BUF_LEN = 6 * H
-MAIN_LEN = 14 * h
+BUF_LEN = 4 * H
+MAIN_LEN = 8 * h
 
 # Recirculating buffer + actual channel.
 NZ = BUF_LEN + MAIN_LEN # streamwise
@@ -121,10 +121,28 @@ class CubeChannelSubdomain(ChannelSubdomain):
 
     def initial_conditions(self, sim, hx, hy, hz):
         sim.rho[:] = 1.0
+
+#        ref = np.load('channel.0.25000.npz')
+#        if self.spec.id == 0:
+#            sim.rho[:] = ref['rho']
+#            sim.vx[:] = ref['v'][0]
+#            sim.vy[:] = ref['v'][1]
+#            sim.vz[:] = ref['v'][2]
+#        else:
+#            rho = np.roll(ref['rho'], 1, 0)
+#            v = np.roll(ref['v'], 1, 1)
+#
+#            rho = np.tile(rho, (2, 1, 1))
+#            v = np.tile(v, (1, 2, 1, 1))
+#
+#            sim.rho[:] = rho[:MAIN_LEN,:,:]
+#            sim.vx[:] = v[0,:MAIN_LEN,:,:]
+#            sim.vy[:] = v[1,:MAIN_LEN,:,:]
+#            sim.vz[:] = v[2,:MAIN_LEN,:,:]
         if self.spec.id == 0:
-            self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
+            self.set_profile(sim, hx, hy, hz, NX, NY, NZ, u_tau, u_max, visc)
         else:
-            self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
+            self.set_profile(sim, hx, hy, hz, NX, NY, NZ, u_tau, u_max, visc)
 
 
     def make_gradients(self, NX, NY, NZ):
@@ -153,13 +171,16 @@ class CubeChannelSubdomain(ChannelSubdomain):
             # node layer replicated from the recirculation buffer.
             return field[z0-1:z1, y0:y1+1, x0:x1+1]
 
+def ceil_div(x, y):
+    return (x + y - 1) / y
+
 class CubeSubdomainRunner(SubdomainRunner):
     def _recv_dists_direct(self):
         if self._spec.id <= 1:
             assert self._sim._recirculation_sock.recv() == 'ready'
             if self._spec.id == 1:
                 self.backend.run_kernel(self._sim._recirc_kernel,
-                                        [(NX + 2 + 127) / 128, NY + 2],
+                                        [ceil_div(NX + 2, self.config.block_size), NY + 2],
                                         self._data_stream)
 
     def _recv_dists_indirect(self):
@@ -170,10 +191,10 @@ class CubeSubdomainRunner(SubdomainRunner):
             self.backend.sync_stream(self._data_stream, self._calc_stream)
             if self._sim.iteration & 1:
               self.backend.run_kernel(self._sim._recv_recirc_kernel_b,
-                                        [(NX + 2 + 127) / 128, NY + 2])
+                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
             else:
               self.backend.run_kernel(self._sim._recv_recirc_kernel_a,
-                                        [(NX + 2 + 127) / 128, NY + 2])
+                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
         elif self._spec.id == 0:
             assert self._sim._recirculation_sock.recv() == 'ready'
 
@@ -195,10 +216,10 @@ class CubeSubdomainRunner(SubdomainRunner):
         if self._spec.id == 0:
             if self._sim.iteration & 1:
                 self.backend.run_kernel(self._sim._coll_recirc_kernel_b,
-                                        [(NX + 2 + 127) / 128, NY + 2])
+                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
             else:
                 self.backend.run_kernel(self._sim._coll_recirc_kernel_a,
-                                        [(NX + 2 + 127) / 128, NY + 2])
+                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
 
             self.backend.from_buf(self._sim._gpu_coll_recirc_buf)
             self._sim._recirculation_sock.send(self._sim._coll_recirc_buf)
@@ -233,7 +254,7 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
             'verbose': True,
             'visc': visc,
             'seed': 11341351351,
-            'block_size': 64,
+            'block_size': 128,
             'precision': 'single',
             'cuda_disable_l1': True,
             'max_iters': 3500000,
@@ -313,7 +334,7 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
     def after_step(self, runner):
         if self.config.access_pattern == 'AA' and runner._spec.id == 1:
             runner.backend.run_kernel(self._ntcopy_kernel,
-                                      [(NX + 2 + 127) / 128, NY + 2])
+                                      [ceil_div(NX + 2, self.config.block_size), NY + 2])
 
         every = 20
         mod = self.iteration % every

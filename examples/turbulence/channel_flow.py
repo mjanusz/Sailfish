@@ -43,7 +43,6 @@ print 'visc = %e' % visc
 print 'u_tau = %e' % u_tau
 print 'force = %e' % (Re_tau**2 * visc**2 / H**3)
 
-
 class ChannelSubdomain(Subdomain3D):
     wall_bc = NTHalfBBWall
 
@@ -53,7 +52,7 @@ class ChannelSubdomain(Subdomain3D):
 
     def initial_conditions(self, sim, hx, hy, hz):
         sim.rho[:] = 1.0
-        self.set_profile(sim, hx, hy, hz, NX, NY, NZ)
+        self.set_profile(sim, hx, hy, hz, NX, NY, NZ, u_tau, u0, visc)
 
     def make_gradients(self, NX, NY, NZ):
         # Buffer size (used to make the random perturbation continuous
@@ -80,7 +79,11 @@ class ChannelSubdomain(Subdomain3D):
         z0, z1 = np.min(hz), np.max(hz)
         return field[z0:z1+1, y0:y1+1, x0:x1+1]
 
-    def set_profile(self, sim, hx, hy, hz, NX, NY, NZ, pert=0.03):
+    # TODO: With these initial conditions, there are still waves generated
+    # at the walls.
+    def set_profile(self, sim, hx, hy, hz, NX, NY, NZ, u_tau, u0, visc, pert=0.03):
+        H = NX / 2
+
         hhx = np.abs(hx - self.wall_bc.location - H)
         y_plus = (H - hhx) * u_tau / visc
         # Sanity checks.

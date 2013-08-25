@@ -191,8 +191,10 @@ ${kernel} void HandleNTCopyNodes(
 		return;
 	}
 
-	int gi_dst = getGlobalIdx(gx, gy, 280);
-	int gi_src = getGlobalIdx(gx, gy, 279);
+
+%if access_pattern == 'AA':
+	int gi_dst = getGlobalIdx(gx, gy, ${lat_nz - 2});
+	int gi_src = getGlobalIdx(gx, gy, ${lat_nz - 3});
 	float t;
 	// Called with an updated iteration number.
 	if ((iteration_number & 1) == 0) {
@@ -206,4 +208,5 @@ ${kernel} void HandleNTCopyNodes(
 			${get_dist('dist_in', grid.idx_opposite[dist_idx], 'gi_dst', offset=rel_offset(*(-grid.basis[dist_idx])))} = t;
 		%endfor
 	}
+%endif
 }

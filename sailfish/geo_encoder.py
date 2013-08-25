@@ -88,7 +88,7 @@ class GeoEncoder(object):
 
         if self.subdomain.spec.id == 1:
             tags[-2,:,1] = tags[-10,:,1]
-            tags[-2,:,60] = tags[-10,:,60]
+            tags[-2,:,self.subdomain.spec.nx] = tags[-10,:,self.subdomain.spec.nx]
 
         return True
 

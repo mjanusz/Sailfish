@@ -27,6 +27,7 @@ Legend:
 #  single axis averaging
 #  measurement point for Strouhal
 
+
 import math
 import tempfile
 import zmq
@@ -44,7 +45,7 @@ from channel_flow import ChannelSubdomain
 import scipy.ndimage.filters
 
 # Cube size.
-h = 30
+h = 40
 
 # Half-height of the channel.
 H = h * 3 / 2
@@ -57,7 +58,7 @@ NZ = BUF_LEN + MAIN_LEN # streamwise
 NY = int(6.4 * h)       # spanwise
 NX = 3 * h              # wall normal
 
-Re_tau = 151.3
+Re_tau = 180.0
 u_max = 0.05
 Re = 5610
 u_tau = u_max / (2.5 * math.log(Re_tau) + 6)
@@ -122,23 +123,6 @@ class CubeChannelSubdomain(ChannelSubdomain):
     def initial_conditions(self, sim, hx, hy, hz):
         sim.rho[:] = 1.0
 
-#        ref = np.load('channel.0.25000.npz')
-#        if self.spec.id == 0:
-#            sim.rho[:] = ref['rho']
-#            sim.vx[:] = ref['v'][0]
-#            sim.vy[:] = ref['v'][1]
-#            sim.vz[:] = ref['v'][2]
-#        else:
-#            rho = np.roll(ref['rho'], 1, 0)
-#            v = np.roll(ref['v'], 1, 1)
-#
-#            rho = np.tile(rho, (2, 1, 1))
-#            v = np.tile(v, (1, 2, 1, 1))
-#
-#            sim.rho[:] = rho[:MAIN_LEN,:,:]
-#            sim.vx[:] = v[0,:MAIN_LEN,:,:]
-#            sim.vy[:] = v[1,:MAIN_LEN,:,:]
-#            sim.vz[:] = v[2,:MAIN_LEN,:,:]
         if self.spec.id == 0:
             self.set_profile(sim, hx, hy, hz, NX, NY, NZ, u_tau, u_max, visc)
         else:
@@ -238,7 +222,7 @@ class CubeSubdomainRunner(SubdomainRunner):
 class CubeChannelSim(LBFluidSim, LBForcedSim):
     subdomain = CubeChannelSubdomain
     subdomain_runner = CubeSubdomainRunner
-    aux_code = ['recirculation_buffer.mako']
+    aux_code = ['recirculation_buffer.mako', 'reynolds_statistics.mako']
 
     @classmethod
     def update_defaults(cls, defaults):
@@ -258,7 +242,11 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
             'precision': 'single',
             'cuda_disable_l1': True,
             'max_iters': 3500000,
-            'every': 200000,
+            'every': 100000,
+            'output': 'cube_h40',
+            'checkpoint_every': 500000,
+            'checkpoint_file': 'cube_h40',
+            #'restore_from': 'cube_h30.1500000',
             'perf_stats_every': 5000,
             'periodic_y': True,
             'periodic_z': True,
@@ -269,6 +257,63 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
         super(CubeChannelSim, self).__init__(config)
         self.add_body_force((0.0, 0.0, 0.99 * Re_tau**2 * visc**2 / H**3))
 
+    def _prepare_reynolds_stats_slice(self, runner):
+        num_stats = 3 * 2 + 3
+        self._stats_bufs = []
+        self._gpu_stats_bufs = []
+        self._x_stats_kern = []
+        c = self.config
+
+        for i in range(5):
+            bufs = []
+            gpu_bufs = []
+
+            for j in range(num_stats):
+                h = np.zeros([c.lat_ny * c.lat_nz], dtype=np.float64)
+                bufs.append(h)
+                gpu_bufs.append(runner.backend.alloc_buf(like=h))
+
+            self._stats_bufs.append(bufs)
+            self._gpu_stats_bufs.append(gpu_bufs)
+
+        bufs = []
+        gpu_bufs = []
+        for j in range(num_stats):
+            h = np.zeros([c.lat_nx * c.lat_nz], dtype=np.float64)
+            bufs.append(h)
+            gpu_bufs.append(runner.backend.alloc_buf(like=h))
+
+        self._stats_bufs.append(bufs)
+        self._gpu_stats_bufs.append(gpu_bufs)
+
+        gpu_v = runner.gpu_field(self.v)
+        for i, y in enumerate((0, 0.1 * c.lat_ny, 0.25 * c.lat_ny, 0.5 * c.lat_ny, 0.75 *
+                  c.lat_ny)):
+            k = runner.get_kernel('ReynoldsX64', [int(y)] + gpu_v +
+                                  self._gpu_stats_bufs[i], 'iPPP' + 'P' *
+                                  num_stats, block_size=(128,))
+            self._x_stats_kern.append(k)
+
+        self._y_stats_kern = runner.get_kernel(
+            'ReynoldsY64', [c.lat_ny / 2] + gpu_v + self._gpu_stats_bufs[-1],
+            'iPPP' + 'P' * num_stats, block_size=(128,))
+
+    def _prepare_reynolds_stats_global(self, runner):
+        num_stats = 3 * 2 + 3
+
+        self._stats = []
+        self._gpu_stats = []
+
+        for i in range(0, num_stats):
+            f = runner.make_scalar_field(dtype=np.float64, register=False)
+            f[:] = 0.0
+            self._stats.append(f)
+            self._gpu_stats.append(runner.backend.alloc_buf(like=runner.field_base(f)))
+
+        gpu_v = runner.gpu_field(self.v)
+        self._stats_kern = runner.get_kernel(
+            'ReynoldsGlobal', gpu_v + self._gpu_stats, 'PPP' + 'P' * num_stats)
+
     def before_main_loop(self, runner):
         self.init_indirect(runner)
         if runner._spec.id == 1:
@@ -276,6 +321,8 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
                 'HandleNTCopyNodes',
                 [runner.gpu_geo_map(), runner.gpu_dist(0, 0)],
                 'PP', needs_iteration=True)
+
+        self._prepare_reynolds_stats_global(runner)
 
     def init_indirect(self, runner):
         """For copying data over the network."""
@@ -312,6 +359,7 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
 
     def init_direct(self, runner):
         """For direct memory reads."""
+        assert self.config.access_pattern == 'AA'
         sock = runner._ctx.socket(zmq.PAIR)
         self._recirc_direct = True
         if runner._spec.id == 0:
@@ -331,18 +379,65 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
                 [recirculation_dist, runner.gpu_dist(0, 0), BUF_LEN, dist_size],
                 'PPii', needs_iteration=True)
 
+
+    num_stats = 0
+    def _collect_stats(self, runner):
+#        runner.backend.run_kernel(self._y_stats_kern, [ceil_div()
+        runner.backend.run_kernel(self._stats_kern, runner._kernel_grid_full)
+        self.num_stats += 1
+
+        if self.num_stats == 10000:
+            for gpu_buf in self._gpu_stats:
+                runner.backend.from_buf(gpu_buf)
+            np.savez('%s_reyn_stat_%s.%s' % (self.config.output, runner._spec.id,
+                                             self.iteration),
+                     ux_m1=self._stats[0],
+                     ux_m2=self._stats[1],
+                     uy_m1=self._stats[2],
+                     uy_m2=self._stats[3],
+                     uz_m1=self._stats[4],
+                     uz_m2=self._stats[5],
+                     ux_uy=self._stats[6],
+                     ux_uz=self._stats[7],
+                     uy_uz=self._stats[8])
+
+            self.num_stats = 0
+            for buf in self._stats:
+                buf[:] = 0.0
+            for gpu_buf in self._gpu_stats:
+                runner.backend.to_buf(gpu_buf)
+
     def after_step(self, runner):
+        # Handle NTCopy nodes in the AA access pattern.
         if self.config.access_pattern == 'AA' and runner._spec.id == 1:
             runner.backend.run_kernel(self._ntcopy_kernel,
                                       [ceil_div(NX + 2, self.config.block_size), NY + 2])
 
-        every = 20
+
+# averaged data on slices:
+#  - symmetry
+#  - y/h = 0.003, 0.1, 0.25, 0.5, 0.75
+
+# reynolds stresses:
+#  - symmetry plane
+#  - TKE at y/h = 0.1m 0.25, 0.5, 0.75
+#  -> TKE = 0.5 (u'^2 + v'^2 + w'^2)
+
+# average data on lines:
+#  - streamwise velocity in the symmetry plane
+
+        return
+
+        if self.iteration < 500000 or runner._spec.id != 1:
+            return
+
+        every = 10
         mod = self.iteration % every
 
         if mod == every - 1:
             self.need_fields_flag = True
         elif mod == 0:
-            pass
+            self._collect_stats(runner)
 
 
 if __name__ == '__main__':

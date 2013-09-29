@@ -47,6 +47,10 @@ class WomersleySubdomain(PoiseuilleSubdomain):
         print 'Re = %.2f' % (self.max_v * self.channel_width(self.config) / 2.0 / visc)
         print 'Wo = %.2f' % (self.channel_width(self.config) / 2.0 * sqrt(omega / visc))
         print 'dP = %.8e' % self.pressure_delta
+
+        # The oscillation period (in lattice time units) should be significantly longer
+        # than the length of the pipe (in lattice length units) in order for the
+        # compressibility effects of LBM to be minimized.
         print 'T = %.2f' % (2 * np.pi / omega)
 
     def womersley_profile(self, r, t, alpha, omega):

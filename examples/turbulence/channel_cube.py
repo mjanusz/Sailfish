@@ -184,10 +184,17 @@ class CubeSubdomainRunner(SubdomainRunner):
 
     def _recv_dists(self):
         # Called with updated sim.iteration both on the host and on the device.
-        if self._sim._recirc_direct:
-            self._recv_dists_direct()
-        else:
-            self._recv_dists_indirect()
+        done = False
+        while not done:
+            try:
+                if self._sim._recirc_direct:
+                    self._recv_dists_direct()
+                else:
+                    self._recv_dists_indirect()
+                done = True
+            except zmq.ZMQError:
+                pass
+
         return super(CubeSubdomainRunner, self)._recv_dists()
 
     def _send_dists_direct(self):
@@ -246,7 +253,9 @@ class CubeChannelSim(LBFluidSim, LBForcedSim):
             'output': 'cube_h40',
             'checkpoint_every': 500000,
             'checkpoint_file': 'cube_h40',
-            #'restore_from': 'cube_h30.1500000',
+            'check_invalid_results_gpu': False,
+            'final_checkpoint': True,
+            'restore_from': 'cube_h40.3000000',
             'perf_stats_every': 5000,
             'periodic_y': True,
             'periodic_z': True,

@@ -379,28 +379,34 @@ ${kernel} void FinalizeReduce${name}(
 		if (c0 >= ${lat_ny - es} || c1 >= ${lat_nz - es}) {
 			return;
 		}
-		gi = getGlobalIdx(es + position, c0, c1);
+		gi = getGlobalIdx(${es} + position, c0, c1);
 		go = (c1 - ${es}) * ${lat_ny - 2 * es} + (c0 - ${es});
 	} else if (axis == 1) {
 		if (c0 >= ${lat_nx - es} || c1 >= ${lat_nz - es}) {
 			return;
 		}
-		gi = getGlobalIdx(c0, es + position, c1);
+		gi = getGlobalIdx(c0, ${es} + position, c1);
 		go = (c1 - ${es}) * ${lat_nx - 2 * es} + (c0 - ${es});
 	} else {
 		if (c0 >= ${lat_nx - es} || c1 >= ${lat_ny - es}) {
 			return;
 		}
-		gi = getGlobalIdx(c0, c1, es + position);
+		gi = getGlobalIdx(c0, c1, ${es} + position);
 		go = (c1 - ${es}) * ${lat_nx - 2 * es} + (c0 - ${es});
 	}
 </%def>
 
-${kernel} void ExtractSliceField(int axis, int positiion,
+${kernel} void ExtractSliceField(int axis, int position,
+		${global_ptr} int *type_map,
 		${global_ptr} float *in,
 		${global_ptr} float *out) {
 	${_compute_gi_for_slice()}
-	out[go] = in[gi];
+
+	if (isWetNode(type_map[gi])) {
+		out[go] = in[gi];
+	} else {
+		out[go] = NAN;
+	}
 }
 
 ${kernel} void ExtractSliceUsq(int axis, int position,

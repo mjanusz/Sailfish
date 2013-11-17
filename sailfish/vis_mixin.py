@@ -24,18 +24,18 @@ class Vis2DSliceMixIn(LBMixIn):
     def before_main_loop(self, runner):
         self._vis_every = 10
         self._axis = 0
-        self._position = 0
+        self._position = 10
 
         self._ctx = zmq.Context()
-        self._sock = self._ctx.socket(zmq.PAIR)
-        port = self._sock.bind_to_random_port('tcp://*')
+        self._sock = self._ctx.socket(zmq.XPUB)
+        self._port = self._sock.bind_to_random_port('tcp://*')
 
         for iface in netifaces.interfaces():
             addr = netifaces.ifaddresses(iface).get(
                 netifaces.AF_INET, [{}])[0].get('addr', '')
             if addr:
                 self.config.logger.info('Visualization server at %s:%d', addr,
-                                        port)
+                                        self._port)
 
         gpu_map = runner.gpu_geo_map()
         gpu_v = runner.gpu_field(self.v)
@@ -73,26 +73,43 @@ class Vis2DSliceMixIn(LBMixIn):
                      pair.gpu], 'iiPPP')))
 
         self._vis_targets = targets
+        self._num_subs = 0
 
     def after_step(self, runner):
         mod = self.iteration % self._vis_every
         if mod == self._vis_every - 1:
-            self.need_fields_flags = True
+            self.need_fields_flag = True
         elif mod == 0:
             md = {
+                'iteration': self.iteration,
                 'names': self._names,
-                'dtype': str(runner.float),
+                'dtype': str(runner.float().dtype),
                 'shape': self._buf_shapes[self._axis]
             }
 
             try:
-                self._sock.send_json(md, zmq.SNDMORE | zmq.NOBLOCK)
+                rc = self._sock.recv(zmq.NOBLOCK)
+                if rc[0] == '\x01':
+                    self._num_subs += 1
+                else:
+                    self._num_subs -= 1
             except zmq.ZMQError:
+                pass
+
+            if self._num_subs <= 0:
+                return
+
+            try:
+                self._sock.send_json(md, zmq.SNDMORE | zmq.NOBLOCK)
+            except zmq.ZMQError, e:
                 # This most likely indicates that the socket is not connected.
                 # Bail out early to avoid running kernels to extract slice data.
                 return
 
-            grid = (self._buf_sizes[self._axis] + self.config.block_size - 1) / self.config.block_size
+            shape = self._buf_shapes[self._axis]
+
+            grid = [(shape[1] + self.config.block_size - 1) /
+                    self.config.block_size, shape[0]]
             for sl in self._slices:
                 runner.backend.run_kernel(sl.kernel, grid)
 
@@ -108,4 +125,3 @@ class Vis2DSliceMixIn(LBMixIn):
                         'Failed to send visualization info for "%s".',
                         self._vis_targets[i].name)
                     return
-

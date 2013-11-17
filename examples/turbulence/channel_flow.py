@@ -16,12 +16,13 @@ from sailfish.lb_single import LBFluidSim
 from sailfish.lb_base import LBForcedSim
 from sailfish.node_type import NTWallTMS, NTHalfBBWall, NTFullBBWall
 from sailfish.stats import ReynoldsStatsMixIn
+from sailfish.vis_mixin import Vis2DSliceMixIn
 
 import scipy.ndimage.filters
 
 # Channel half-height.
-H = 40
-Re_tau = 395
+H = 35
+Re_tau = 180
 
 # Max velocity.
 u0 = 0.05
@@ -30,7 +31,7 @@ visc = u_tau * H / Re_tau
 
 NX = 2 * H  # wall normal
 NY = 2 * H  # spanwise (PBC)
-NZ = 6 * H  # streamwise
+NZ = 4 * H  # streamwise
 
 # Literature stability limits:
 # 2.3 max stability with bounce back
@@ -108,7 +109,7 @@ class ChannelSubdomain(Subdomain3D):
         sim.vz[:] += dvz / scale * 0.05  # streamwise
 
 
-class ChannelSim(LBFluidSim, LBForcedSim, ReynoldsStatsMixIn):
+class ChannelSim(LBFluidSim, LBForcedSim, ReynoldsStatsMixIn, Vis2DSliceMixIn):
     subdomain = ChannelSubdomain
 
     @classmethod

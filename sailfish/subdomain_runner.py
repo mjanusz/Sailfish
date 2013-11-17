@@ -762,7 +762,6 @@ class SubdomainRunner(object):
         addr, _ = self.make_scalar_field(dtype=np.uint32, register=False, need_indirect=False,
                                          nonghost_view=False)
         addr[:] = 0xffffffff
-        print addr.shape
         self._host_indirect_address = addr
         addr[self._subdomain.active_node_mask] = np.arange(self._subdomain.active_nodes)
         self._gpu_indirect_address = self.backend.alloc_buf(like=self._field_base[id(addr.base)])
@@ -1636,6 +1635,10 @@ class SubdomainRunner(object):
                 self._profile.end_step()
 
                 self._sim.after_step(self)
+                # Allow mix-ins to have their own after_step functions.
+                for c in self._sim.__class__.mro()[1:]:
+                    if issubclass(c, LBMixIn) and hasattr(c, 'after_step'):
+                        c.after_step(self._sim, self)
 
                 if self.config.checkpoint_file and (
                         self._sim.need_checkpoint() or self._checkpoint_req > 0):

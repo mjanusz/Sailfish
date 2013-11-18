@@ -21,7 +21,7 @@ from sailfish.vis_mixin import Vis2DSliceMixIn
 import scipy.ndimage.filters
 
 # Channel half-height.
-H = 35
+H = 60
 Re_tau = 180
 
 # Max velocity.
@@ -31,7 +31,7 @@ visc = u_tau * H / Re_tau
 
 NX = 2 * H  # wall normal
 NY = 2 * H  # spanwise (PBC)
-NZ = 4 * H  # streamwise
+NZ = 6 * H  # streamwise
 
 # Literature stability limits:
 # 2.3 max stability with bounce back
@@ -138,11 +138,11 @@ class ChannelSim(LBFluidSim, LBForcedSim, ReynoldsStatsMixIn, Vis2DSliceMixIn):
             'perf_stats_every': 5000,
             'periodic_y': True,
             'periodic_z': True,
-            'output': 'bgk395_hbb_120z',
-            'final_checkpoint': True,
-            'checkpoint_file': 'bgk395_hbb_120z',
+            #'output': 'bgk395_hbb_120z',
+            #'final_checkpoint': True,
+            #'checkpoint_file': 'bgk395_hbb_120z',
             #'restore_from': 'bgk_hbb_moser_dbl.0200000',
-            'checkpoint_every': 200000,
+            #'checkpoint_every': 200000,
             'subdomains': 2,
             'cluster_interface': 'ib0'
             })

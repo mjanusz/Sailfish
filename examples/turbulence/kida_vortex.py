@@ -13,6 +13,7 @@ from sailfish.geo import EqualSubdomainsGeometry3D
 from sailfish.subdomain import Subdomain3D
 from sailfish.controller import LBSimulationController
 from sailfish.lb_single import LBFluidSim
+from sailfish.stats import KineticEnergyEnstrophyMixIn
 
 class KidaSubdomain(Subdomain3D):
     max_v = 0.05

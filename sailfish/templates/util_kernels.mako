@@ -384,7 +384,14 @@ ${kernel} void ApplyPeriodicBoundaryConditionsWithSwap(
 
 
 <%def name="_copy_field_if_finite(src, dest)">
-	if (isfinite(field[${src}])) {
+	%if node_addressing == 'indirect':
+		<% h = '%s != INVALID_NODE && %s != INVALID_NODE && ' % (src, dest) %>
+	%else:
+		<% h = '' %>
+	%endif
+
+
+	if (${h} isfinite(field[${src}])) {
 		field[${dest}] = field[${src}];
 	}
 </%def>
@@ -800,6 +807,7 @@ ${kernel} void CollectSparseData(
 		return;
 	}
 	int gi = idx_array[idx];
+	${_handle_indirect()}
 	buffer[idx] = dist[gi];
 }
 
@@ -815,6 +823,7 @@ ${kernel} void DistributeSparseData(
 		return;
 	}
 	int gi = idx_array[idx];
+	${_handle_indirect()}
 	dist[gi] = buffer[idx];
 }
 
@@ -829,7 +838,7 @@ ${kernel} void CollectContinuousMacroData(
 		return;
 	}
 
-	const int gi = getGlobalIdx(base_gx + idx, gy);
+	int gi = getGlobalIdx(base_gx + idx, gy);
 	${_handle_indirect()}
 	buffer[idx] = field[gi];
 }
@@ -890,7 +899,7 @@ ${kernel} void DistributeContinuousMacroData(
 		return;
 	}
 
-	const int gi = getGlobalIdx(base_gx + idx, gy);
+	int gi = getGlobalIdx(base_gx + idx, gy);
 	${_handle_indirect()}
 	field[gi] = buffer[idx];
 }

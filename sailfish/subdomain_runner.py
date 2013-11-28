@@ -55,6 +55,8 @@ class SubdomainRunner(object):
 
     An arrow above symbolizes a dependency between the two streams.
     """
+    INVALID_NODE = 0xffffffff
+
     def __init__(self, simulation, spec, output, backend, quit_event,
             summary_addr=None, master_addr=None, summary_channel=None):
         """
@@ -525,16 +527,36 @@ class SubdomainRunner(object):
         :param location: position of the node in the natural order
         :param dist_num: distribution number
         """
+        def _indirect(idxs):
+            if self.config.node_addressing == 'indirect':
+                # Get actual node addresses.
+                # TODO: Ideally, we would filter out unused nodes here. This
+                # requires careful handling between what the source domain and the
+                # destination domain see/expect.
+                ret = self._host_indirect_address.flatten()[idxs]
+                mask = ret != self.INVALID_NODE
+                if ret.size == 1:
+                    if ret != self.INVALID_NODE:
+                        ret += self.num_phys_nodes * dist_num
+                else:
+                    if np.array(dist_num).size == 1:
+                        ret[mask] += self.num_phys_nodes * dist_num
+                    else:
+                        ret[mask] += (self.num_phys_nodes * dist_num)[mask]
+                return ret
+            else:
+                return idxs + self.num_phys_nodes * dist_num
+
+        # XXX: handle indirect here
         if self.dim == 2:
             gx, gy = location
             arr_nx = self._physical_size[1]
-            return gx + arr_nx * gy + (self.num_phys_nodes * dist_num)
+            return _indirect(gx + arr_nx * gy)
         else:
             gx, gy, gz = location
             arr_nx = self._physical_size[2]
             arr_ny = self._physical_size[1]
-            return ((gx + arr_nx * gy + arr_nx * arr_ny * gz) +
-                    (self.num_phys_nodes * dist_num))
+            return _indirect(gx + arr_nx * gy + arr_nx * arr_ny * gz)
 
     def _idx_helper(self, gx, buf_slice, dists):
         """Returns a numpy array of global indices (in the subdomain coordinate
@@ -552,17 +574,7 @@ class SubdomainRunner(object):
             return self._get_global_idx((gx, idx[1]), idx[0]).astype(np.uint32)
         else:
             return self._get_global_idx((gx, idx[2], idx[1]),
-                    idx[0]).astype(np.uint32)
-
-    def _handle_idx_for_indirect(self, idxs):
-        if self.config.node_addressing == 'indirect':
-            # Get actual node addresses.
-            # TODO: Ideally, we would filter out unused nodes here. This
-            # requires careful handling between what the source domain and the
-            # destination domain see/expect.
-            return self._host_indirect_address.flatten()[idxs]
-        else:
-            return idxs
+                                        idx[0]).astype(np.uint32)
 
     def _get_src_slice_indices(self, face, cpair, opposite=False):
         """Returns a numpy array of indices of sparse nodes from which
@@ -581,12 +593,11 @@ class SubdomainRunner(object):
         # as for the macroscopic fields.
         if opposite:
             gx = self.lat_linear_macro[face]
-            ret = self._idx_helper(gx, cpair.src.src_macro_slice,
-                                   [self._sim.grid.idx_opposite[d] for d in cpair.src.dists])
+            return self._idx_helper(gx, cpair.src.src_macro_slice,
+                                    [self._sim.grid.idx_opposite[d] for d in cpair.src.dists])
         else:
             gx = self.lat_linear[face]
-            ret = self._idx_helper(gx, cpair.src.src_slice, cpair.src.dists)
-        return self._handle_idx_for_indirect(ret)
+            return self._idx_helper(gx, cpair.src.src_slice, cpair.src.dists)
 
     def _get_dst_slice_indices(self, face, cpair, opposite=False):
         """Returns a numpy array of indices of sparse nodes to which
@@ -605,17 +616,15 @@ class SubdomainRunner(object):
             if not cpair.src.dst_macro_slice:
                 return None
             gx = self.lat_linear_with_swap[self._spec.opposite_face(face)]
-            ret = self._idx_helper(gx, cpair.src.dst_macro_slice,
-                                   [self._sim.grid.idx_opposite[d] for d in cpair.dst.dists])
+            return self._idx_helper(gx, cpair.src.dst_macro_slice,
+                                    [self._sim.grid.idx_opposite[d] for d in cpair.dst.dists])
         else:
             if not cpair.dst.dst_slice:
                 return None
             es = self._spec.envelope_size
             dst_slice = [slice(x.start + es, x.stop + es) for x in cpair.dst.dst_slice]
             gx = self.lat_linear_dist[self._spec.opposite_face(face)]
-            ret = self._idx_helper(gx, dst_slice, cpair.dst.dists)
-
-        return self._handle_idx_for_indirect(ret)
+            return self._idx_helper(gx, dst_slice, cpair.dst.dists)
 
     def _dst_face_loc_to_full_loc(self, face, face_loc, opposite=False):
         """Expands a location tuple in the (full) face coordinate system into a
@@ -777,7 +786,7 @@ class SubdomainRunner(object):
         addr, _ = self.make_scalar_field(dtype=np.uint32, register=False, need_indirect=False,
                                          nonghost_view=False)
         # Mark all nodes as invalid.
-        addr[:] = 0xffffffff
+        addr[:] = self.INVALID_NODE
         self._host_indirect_address = addr
         addr[self._subdomain.active_node_mask] = np.arange(self._subdomain.active_nodes)
         self._gpu_indirect_address = self.backend.alloc_buf(like=self._field_base[id(addr.base)])
@@ -1119,8 +1128,7 @@ class SubdomainRunner(object):
                 signature = 'PPPi'
                 args = [idx_buffer, self.gpu_dist(cbuf.grid_id, i),
                         coll_buf.gpu, coll_buf.host.size]
-                args, signature = self._add_indirect_args(args, signature)
-                return KernelGrid(self.get_kernel('CollectSparseData', args
+                return KernelGrid(self.get_kernel('CollectSparseData', args,
                                                   signature, (block_size,)),
                                   grid=(grid_dim1(coll_buf.host.size),))
 
@@ -1186,7 +1194,6 @@ class SubdomainRunner(object):
             args = [cbuf.dist_full_idx_opposite.gpu, self.gpu_dist(cbuf.grid_id, 0),
                     cbuf.local_recv_buf.gpu, cbuf.local_recv_buf.host.size]
             signature = 'PPPi'
-            args, signature = self._add_indirect_args(args, signature)
             secondary.append(KernelGrid(self.get_kernel('DistributeSparseData',
                                                         args, signature, (block_size,)), grid_size))
         else:
@@ -1225,7 +1232,6 @@ class SubdomainRunner(object):
                 args = [cbuf.dist_partial_idx.gpu, self.gpu_dist(cbuf.grid_id, i),
                         cbuf.dist_partial_buf.gpu, cbuf.dist_partial_buf.host.size]
                 signature = 'PPPi'
-                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(
                         self.get_kernel('DistributeSparseData', args, signature, (block_size,)),
                     grid_size)
@@ -1241,9 +1247,8 @@ class SubdomainRunner(object):
 
                 def _get_sparse_fdist_kernel(i):
                     args = [cbuf.dist_full_idx.gpu, self.gpu_dist(cbuf.grid_id, i),
-                            cbuf.dist_full_buf.gpu, cbuf.dist_full_buf.host.size],
+                            cbuf.dist_full_buf.gpu, cbuf.dist_full_buf.host.size]
                     signature = 'PPPi'
-                    args, signature = self._add_indirect_args(args, signature)
                     return KernelGrid(
                             self.get_kernel('DistributeSparseData', args, signature, (block_size,)),
                             grid_size)
@@ -1266,7 +1271,7 @@ class SubdomainRunner(object):
                     grid_size = (grid_dim1(cbuf.dist_full_buf.host.shape[-1]),
                         cbuf.dist_full_buf.host.shape[-2] * len(cbuf.cpair.dst.dists))
 
-                def _get_cont_dist_kernel(i):
+                def _get_cont_dist_kernel(i, signature):
                     args = ([self.gpu_dist(cbuf.grid_id, i),
                              self._spec.opposite_face(cbuf.face)] +
                              min_max + [cbuf.dist_full_buf.gpu])
@@ -1275,8 +1280,8 @@ class SubdomainRunner(object):
                             self.get_kernel('DistributeContinuousData', args, signature, (block_size,)),
                             grid_size)
 
-                primary.append(_get_cont_dist_kernel(0))
-                secondary.append(_get_cont_dist_kernel(1))
+                primary.append(_get_cont_dist_kernel(0, signature))
+                secondary.append(_get_cont_dist_kernel(1, signature))
 
         return primary, secondary
 
@@ -1414,6 +1419,7 @@ class SubdomainRunner(object):
             for dist_num, locs in sorted(dists.iteritems()):
                 opp_idx = self._subdomain.grid.idx_opposite[dist_num]
 
+                # XXX: fix this for indirect
                 # Momentum transferred to the solid node.
                 idxs = np.concatenate((idxs, self._get_global_idx(
                     tuple(reversed(locs)), opp_idx).astype(np.int32)))
@@ -1479,7 +1485,6 @@ class SubdomainRunner(object):
         # Creates scalar fields on the host. They are used for gpu-host
         # communication and for specifing initial conditions.
         self._sim.init_fields(self)
-        self._init_buffers()
         self._init_compute()
         self.config.logger.debug("Initializing macroscopic fields.")
         self._subdomain.init_fields(self._sim)
@@ -1487,6 +1492,7 @@ class SubdomainRunner(object):
         self._init_force_objects()
         self.config.logger.debug("Initializing GPU kernels.")
 
+        self._init_buffers()
         self._init_interblock_kernels()
         self._prepare_compute_kernels()
         if self._spec.periodic:
@@ -1826,7 +1832,6 @@ class NNSubdomainRunner(SubdomainRunner):
             args = [cbuf.coll_idx.gpu, self.gpu_field(cbuf.field),
                     cbuf.coll_buf.gpu, cbuf.coll_buf.host.size]
             signature = 'PPPi'
-            args, signature = self._add_indirect_args(args, signature)
             return KernelGrid(self.get_kernel('CollectSparseData', args,
                                               signature, (block_size,)), grid_size)
         # Continuous data collection.
@@ -1866,7 +1871,6 @@ class NNSubdomainRunner(SubdomainRunner):
             args = [cbuf.dist_idx.gpu, self.gpu_field(cbuf.field),
                     cbuf.recv_buf.gpu, cbuf.recv_buf.host.size]
             signature = 'PPPi'
-            args, signature = self._add_indirect_args(args, signature)
             grid_size = (grid_dim1(cbuf.recv_buf.host.size),)
             return KernelGrid(self.get_kernel('DistributeSparseData', args,
                                               signature, (block_size,)),

@@ -477,9 +477,7 @@ ${kernel} void ApplyMacroPeriodicBoundaryConditions(
 <%def name="_handle_indirect()">
 	%if node_addressing == 'indirect':
 		gi = nodes[gi];
-		if (gi == INVALID_NODE) {
-			return;
-		}
+		if (gi == INVALID_NODE) return;
 	%endif
 </%def>
 
@@ -795,7 +793,6 @@ ${kernel} void DistributeContinuousDataWithSwap(
 %endif
 
 ${kernel} void CollectSparseData(
-		${nodes_array_if_required()}
 		${global_ptr} int *idx_array, ${global_ptr} float *dist,
 		${global_ptr} float *buffer, int max_idx)
 {
@@ -808,12 +805,11 @@ ${kernel} void CollectSparseData(
 		return;
 	}
 	int gi = idx_array[idx];
-	${_handle_indirect()}
+	if (gi == INVALID_NODE) return;
 	buffer[idx] = dist[gi];
 }
 
 ${kernel} void DistributeSparseData(
-		${nodes_array_if_required()}
 		${global_ptr} int *idx_array, ${global_ptr} float *dist,
 		${global_ptr} float *buffer, int max_idx)
 {
@@ -825,7 +821,7 @@ ${kernel} void DistributeSparseData(
 		return;
 	}
 	int gi = idx_array[idx];
-	${_handle_indirect()}
+	if (gi == INVALID_NODE) return;
 	dist[gi] = buffer[idx];
 }
 

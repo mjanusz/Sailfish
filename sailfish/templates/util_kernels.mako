@@ -262,7 +262,7 @@
 					corner_cond, target = handle_corners(grid.basis[i], axis_target)
 				%>
 				%if corner_cond:
-					${cond(not opposite, 'else')}
+					${'else' if not opposite else ''}
 					{
 						if (0) {}
 						%for cond, targ in zip(corner_cond, target):
@@ -506,7 +506,7 @@ ${kernel} void ApplyMacroPeriodicBoundaryConditions(
 			const int dist_size = max_lx / ${len(dists)};
 			const int dist_num = idx / dist_size;
 			const int gx = idx % dist_size;
-			const int gi = getGlobalIdx(base_gx + gx, ${gy});
+			int gi = getGlobalIdx(base_gx + gx, ${gy});
 			${_handle_indirect()}
 
 			switch (dist_num) {
@@ -673,7 +673,7 @@ ${kernel} void CollectContinuousDataWithSwap(
 			const int dist_num = idx / dist_size;
 			const int gx = idx % dist_size;
 			const float tmp = buffer[idx];
-			const int gi = getGlobalIdx(base_gx + gx, ${gy});
+			int gi = getGlobalIdx(base_gx + gx, ${gy});
 			${_handle_indirect()}
 			switch (dist_num) {
 				%for i, prop_dist in enumerate(dists):
@@ -795,6 +795,7 @@ ${kernel} void DistributeContinuousDataWithSwap(
 %endif
 
 ${kernel} void CollectSparseData(
+		${nodes_array_if_required()}
 		${global_ptr} int *idx_array, ${global_ptr} float *dist,
 		${global_ptr} float *buffer, int max_idx)
 {
@@ -812,6 +813,7 @@ ${kernel} void CollectSparseData(
 }
 
 ${kernel} void DistributeSparseData(
+		${nodes_array_if_required()}
 		${global_ptr} int *idx_array, ${global_ptr} float *dist,
 		${global_ptr} float *buffer, int max_idx)
 {

@@ -1094,6 +1094,12 @@ class SubdomainRunner(object):
             for component in self.gpu_field(field):
                 self.backend.from_buf_async(component, self._calc_stream)
 
+    def _add_indirect_args(self, args, signature):
+        if self.config.node_addressing == 'indirect':
+            return [self.gpu_indirect_address()] + args, 'P' + signature
+        else:
+            return args, signature
+
     def _init_collect_kernels(self, cbuf, grid_dim1, block_size):
         """Returns collection kernels for a connection.
 
@@ -1110,10 +1116,12 @@ class SubdomainRunner(object):
         # Sparse data collection.
         if cbuf.coll_idx.host is not None:
             def _get_sparse_coll_kernel(i, idx_buffer=cbuf.coll_idx.gpu, coll_buf=cbuf.coll_buf):
-                return KernelGrid(self.get_kernel('CollectSparseData',
-                                                  [idx_buffer, self.gpu_dist(cbuf.grid_id, i),
-                                                   coll_buf.gpu, coll_buf.host.size],
-                                                  'PPPi', (block_size,)),
+                signature = 'PPPi'
+                args = [idx_buffer, self.gpu_dist(cbuf.grid_id, i),
+                        coll_buf.gpu, coll_buf.host.size]
+                args, signature = self._add_indirect_args(args, signature)
+                return KernelGrid(self.get_kernel('CollectSparseData', args
+                                                  signature, (block_size,)),
                                   grid=(grid_dim1(coll_buf.host.size),))
 
             if self.config.access_pattern == 'AA':
@@ -1137,12 +1145,10 @@ class SubdomainRunner(object):
                     grid_size = (grid_dim1(coll_buf.host.shape[-1]),
                                  coll_buf.host.shape[-2] * len(cbuf.cpair.src.dists))
 
+                args = [self.gpu_dist(cbuf.grid_id, i), cbuf.face] + min_max + [coll_buf.gpu]
+                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(
-                    self.get_kernel(kernel,
-                    [self.gpu_dist(cbuf.grid_id, i),
-                     cbuf.face] + min_max + [coll_buf.gpu],
-                     signature, (block_size,)),
-                     grid_size)
+                    self.get_kernel(kernel, args, signature, (block_size,)), grid_size)
 
             if self.config.access_pattern == 'AA':
                 return (_get_cont_coll_kernel(0, 'CollectContinuousDataWithSwap', cbuf.local_coll_buf,
@@ -1177,13 +1183,12 @@ class SubdomainRunner(object):
 
         if cbuf.dist_full_idx_opposite.host is not None:
             grid_size = (grid_dim1(cbuf.local_recv_buf.host.size),)
+            args = [cbuf.dist_full_idx_opposite.gpu, self.gpu_dist(cbuf.grid_id, 0),
+                    cbuf.local_recv_buf.gpu, cbuf.local_recv_buf.host.size]
+            signature = 'PPPi'
+            args, signature = self._add_indirect_args(args, signature)
             secondary.append(KernelGrid(self.get_kernel('DistributeSparseData',
-                                                        [cbuf.dist_full_idx_opposite.gpu,
-                                                         self.gpu_dist(cbuf.grid_id, 0),
-                                                         cbuf.local_recv_buf.gpu,
-                                                         cbuf.local_recv_buf.host.size],
-                                                        'PPPi', (block_size,)),
-                                        grid_size))
+                                                        args, signature, (block_size,)), grid_size))
         else:
             min_max = ([y.start for y in cbuf.cpair.src.dst_macro_slice] +
                 list(reversed(cbuf.local_recv_buf.host.shape[1:])))
@@ -1197,11 +1202,12 @@ class SubdomainRunner(object):
                 grid_size = (grid_dim1(cbuf.local_recv_buf.host.shape[-1]),
                              cbuf.local_recv_buf.host.shape[-2] * len(cbuf.cpair.dst.dists))
 
+            args = [self.gpu_dist(cbuf.grid_id, 0),
+                    self._spec.opposite_face(cbuf.face)] + min_max + [cbuf.local_recv_buf.gpu],
+            args, signature = self._add_indirect_args(args, signature)
             secondary.append(KernelGrid(self.get_kernel('DistributeContinuousDataWithSwap',
-                                                        [self.gpu_dist(cbuf.grid_id, 0),
-                                                         self._spec.opposite_face(cbuf.face)] +
-                                                        min_max + [cbuf.local_recv_buf.gpu],
-                                                        signature, (block_size,)),
+                                                        args, signature,
+                                                        (block_size,)),
                                         grid_size))
 
         return primary, secondary
@@ -1216,14 +1222,13 @@ class SubdomainRunner(object):
             grid_size = (grid_dim1(cbuf.dist_partial_buf.host.size),)
 
             def _get_sparse_dist_kernel(i):
+                args = [cbuf.dist_partial_idx.gpu, self.gpu_dist(cbuf.grid_id, i),
+                        cbuf.dist_partial_buf.gpu, cbuf.dist_partial_buf.host.size]
+                signature = 'PPPi'
+                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(
-                        self.get_kernel('DistributeSparseData',
-                            [cbuf.dist_partial_idx.gpu,
-                             self.gpu_dist(cbuf.grid_id, i),
-                             cbuf.dist_partial_buf.gpu,
-                             cbuf.dist_partial_buf.host.size],
-                            'PPPi', (block_size,)),
-                        grid_size)
+                        self.get_kernel('DistributeSparseData', args, signature, (block_size,)),
+                    grid_size)
 
             primary.append(_get_sparse_dist_kernel(0))
             secondary.append(_get_sparse_dist_kernel(1))
@@ -1235,13 +1240,12 @@ class SubdomainRunner(object):
                 grid_size = (grid_dim1(cbuf.dist_full_buf.host.size),)
 
                 def _get_sparse_fdist_kernel(i):
+                    args = [cbuf.dist_full_idx.gpu, self.gpu_dist(cbuf.grid_id, i),
+                            cbuf.dist_full_buf.gpu, cbuf.dist_full_buf.host.size],
+                    signature = 'PPPi'
+                    args, signature = self._add_indirect_args(args, signature)
                     return KernelGrid(
-                            self.get_kernel('DistributeSparseData',
-                                [cbuf.dist_full_idx.gpu,
-                                 self.gpu_dist(cbuf.grid_id, i),
-                                 cbuf.dist_full_buf.gpu,
-                                 cbuf.dist_full_buf.host.size],
-                            'PPPi', (block_size,)),
+                            self.get_kernel('DistributeSparseData', args, signature, (block_size,)),
                             grid_size)
 
                 primary.append(_get_sparse_fdist_kernel(0))
@@ -1263,12 +1267,12 @@ class SubdomainRunner(object):
                         cbuf.dist_full_buf.host.shape[-2] * len(cbuf.cpair.dst.dists))
 
                 def _get_cont_dist_kernel(i):
-                    return KernelGrid(
-                            self.get_kernel('DistributeContinuousData',
-                            [self.gpu_dist(cbuf.grid_id, i),
+                    args = ([self.gpu_dist(cbuf.grid_id, i),
                              self._spec.opposite_face(cbuf.face)] +
-                            min_max + [cbuf.dist_full_buf.gpu],
-                            signature, (block_size,)),
+                             min_max + [cbuf.dist_full_buf.gpu])
+                    args, signature = self._add_indirect_args(args, signature)
+                    return KernelGrid(
+                            self.get_kernel('DistributeContinuousData', args, signature, (block_size,)),
                             grid_size)
 
                 primary.append(_get_cont_dist_kernel(0))
@@ -1819,10 +1823,12 @@ class NNSubdomainRunner(SubdomainRunner):
         # Sparse data collection.
         if cbuf.coll_idx.host is not None:
             grid_size = (grid_dim1(cbuf.coll_buf.host.size),)
-            return KernelGrid(self.get_kernel('CollectSparseData',
-                    [cbuf.coll_idx.gpu, self.gpu_field(cbuf.field),
-                     cbuf.coll_buf.gpu, cbuf.coll_buf.host.size], 'PPPi',
-                    (block_size,)), grid_size)
+            args = [cbuf.coll_idx.gpu, self.gpu_field(cbuf.field),
+                    cbuf.coll_buf.gpu, cbuf.coll_buf.host.size]
+            signature = 'PPPi'
+            args, signature = self._add_indirect_args(args, signature)
+            return KernelGrid(self.get_kernel('CollectSparseData', args,
+                                              signature, (block_size,)), grid_size)
         # Continuous data collection.
         else:
             if self.dim == 2:
@@ -1837,25 +1843,34 @@ class NNSubdomainRunner(SubdomainRunner):
 
             if self.dim == 2:
                 gy = self.lat_linear_macro[cbuf.face]
+                args = [self.gpu_field(cbuf.field)] + min_max + [gy,
+                        cbuf.coll_buf.gpu]
+                signature = 'PiiiP'
+                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(self.get_kernel('CollectContinuousMacroData',
-                        [self.gpu_field(cbuf.field)] + min_max + [gy,
-                         cbuf.coll_buf.gpu], 'PiiiP', (block_size,)),
-                         grid_size)
+                                                  args, signature, (block_size,)),
+                                  grid_size)
             else:
+                signature = 'PiiiiiP'
+                args = ([self.gpu_field(cbuf.field), cbuf.face] +
+                        min_max + [cbuf.coll_buf.gpu])
+                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(self.get_kernel('CollectContinuousMacroData',
-                        [self.gpu_field(cbuf.field), cbuf.face] +
-                        min_max + [cbuf.coll_buf.gpu], 'PiiiiiP', (block_size,)),
-                        grid_size)
+                                                  args, signature, (block_size,)),
+                                  grid_size)
 
 
     def _init_macro_distrib_kernels(self, cbuf, grid_dim1, block_size):
         # Sparse data distribution.
         if cbuf.dist_idx.host is not None:
+            args = [cbuf.dist_idx.gpu, self.gpu_field(cbuf.field),
+                    cbuf.recv_buf.gpu, cbuf.recv_buf.host.size]
+            signature = 'PPPi'
+            args, signature = self._add_indirect_args(args, signature)
             grid_size = (grid_dim1(cbuf.recv_buf.host.size),)
-            return KernelGrid(self.get_kernel('DistributeSparseData',
-                        [cbuf.dist_idx.gpu, self.gpu_field(cbuf.field),
-                         cbuf.recv_buf.gpu, cbuf.recv_buf.host.size], 'PPPi',
-                        (block_size,)), grid_size)
+            return KernelGrid(self.get_kernel('DistributeSparseData', args,
+                                              signature, (block_size,)),
+                              grid_size)
         # Continuous data distribution.
         else:
             if self.dim == 2:
@@ -1870,15 +1885,21 @@ class NNSubdomainRunner(SubdomainRunner):
 
             if self.dim == 2:
                 gy = self.lat_linear[cbuf.face]
+                args = [self.gpu_field(cbuf.field)] + min_max + [gy,
+                        cbuf.recv_buf.gpu]
+                signature = 'PiiiP'
+                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(self.get_kernel('DistributeContinuousMacroData',
-                        [self.gpu_field(cbuf.field)] + min_max + [gy,
-                         cbuf.recv_buf.gpu], 'PiiiP', (block_size,)),
-                         grid_size)
+                                                  args, signature, (block_size,)),
+                                  grid_size)
             else:
+                args = ([self.gpu_field(cbuf.field), cbuf.face] +
+                         min_max + [cbuf.recv_buf.gpu])
+                signature = 'PiiiiiP',
+                args, signature = self._add_indirect_args(args, signature)
                 return KernelGrid(self.get_kernel('DistributeContinuousMacroData',
-                        [self.gpu_field(cbuf.field), cbuf.face] +
-                        min_max + [cbuf.recv_buf.gpu], 'PiiiiiP', (block_size,)),
-                        grid_size)
+                                                  args, signature, (block_size,)),
+                                  grid_size)
 
 
     def _init_interblock_kernels(self):

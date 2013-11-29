@@ -579,7 +579,7 @@ ${device_func} inline void postcollisionBoundaryConditions(
 }
 
 <%def name="precollision_arguments()" filter="trim">
-	%if access_pattern == 'AA' and nt.NTDoNothing in nodes_types:
+	%if access_pattern == 'AA' and nt.NTDoNothing in node_types:
 		, dist_out, gi
 		%if node_addressing == 'indirect':
 			, nodes, dense_gi

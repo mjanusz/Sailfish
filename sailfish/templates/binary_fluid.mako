@@ -85,6 +85,7 @@ ${const_var} float tau1 = ${tau_phi}f;
 // and the macroscopic fields.
 ${kernel} void SetInitialConditions(
 	${nodes_array_if_required()}
+	${global_ptr} ${const_ptr} int *__restrict__ map,
 	${global_ptr} float *dist1_in,
 	${global_ptr} float *dist2_in,
 	${kernel_args_1st_moment('iv')}
@@ -93,6 +94,16 @@ ${kernel} void SetInitialConditions(
 {
 	${local_indices()}
 	${indirect_index()}
+
+	int ncode = map[gi];
+	int type = decodeNodeType(ncode);
+	if (!isWetNode(type)) {
+		%for i in range(0, grid.Q):
+			${get_odist('dist1_in', i)} = INFINITY;
+			${get_odist('dist2_in', i)} = INFINITY;
+		%endfor
+		return;
+	}
 
 	// Cache macroscopic fields in local variables.
 	float rho = irho[gi];

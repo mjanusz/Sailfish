@@ -2,6 +2,7 @@ import numpy as np
 
 from sailfish.controller import LBSimulationController
 from sailfish.geo import EqualSubdomainsGeometry3D
+from sailfish.vis_mixin import Vis2DSliceMixIn
 
 import common
 
@@ -19,7 +20,7 @@ class UshapeSubdomain(common.InflowOutflowSubdomain):
         return inlet, outlet
 
 
-class UshapeSim(common.HemoSim):
+class UshapeSim(common.HemoSim, Vis2DSliceMixIn):
     subdomain = UshapeSubdomain
     phys_diam = 2.54e-2
 

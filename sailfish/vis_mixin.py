@@ -73,7 +73,7 @@ class Vis2DSliceMixIn(LBMixIn):
                            runner._spec.nx * runner._spec.ny)
         self._buf_shapes = ((runner._spec.nz, runner._spec.ny),
                             (runner._spec.nz, runner._spec.nx),
-                            (runner._spec.ny, runner._spec.ny))
+                            (runner._spec.ny, runner._spec.nx))
         self._axis_len = (runner._spec.nx, runner._spec.ny, runner._spec.nz)
 
         # The buffer has to be large enough to hold any slice.

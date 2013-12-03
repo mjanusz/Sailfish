@@ -56,6 +56,9 @@ class DataThread(threading.Thread):
             uncomp += len(buf)
 
             t = np.frombuffer(buf, dtype=md['dtype'])
+
+            print md['shape'], t.shape
+
             md['fields'].append(t.reshape(md['shape']))
 
         # Save the compression ratio.
@@ -106,7 +109,7 @@ class CanvasFrame(wx.Frame):
         # Slice axis control.
         self.axis = wx.ComboBox(self, value='x', choices=['x', 'y', 'z'],
                                 style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.OnAxisSelect)
+        self.axis.Bind(wx.EVT_COMBOBOX, self.OnAxisSelect)
 
         # Refresh frequency control.
         self.every = wx.SpinCtrl(self)
@@ -117,7 +120,7 @@ class CanvasFrame(wx.Frame):
         # Field selector.
         self.field = wx.ComboBox(self, value='vx', choices=['vx'],
                                  style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.Bind(wx.EVT_COMBOBOX, self.OnFieldSelect)
+        self.field.Bind(wx.EVT_COMBOBOX, self.OnFieldSelect)
 
         # Status information.
         pos_txt = wx.StaticText(self, -1, 'Position: ')
@@ -184,6 +187,7 @@ class CanvasFrame(wx.Frame):
         assert self._sock.recv_string() == 'ack'
 
     def OnAxisSelect(self, event):
+        print 'axis update'
         self._cmd('position', 0)
         self._cmd('axis', event.GetSelection())
         self._reset_colorscale()
@@ -199,6 +203,8 @@ class CanvasFrame(wx.Frame):
     def OnFieldSelect(self, event):
         self._cmd('field', event.GetSelection())
         self._reset_colorscale()
+        self.figure.clear()
+        self.plot = None
 
     def OnPaint(self, event):
         self.canvas.draw()
@@ -210,10 +216,13 @@ class CanvasFrame(wx.Frame):
 
     def OnData(self, evt):
         data = evt.data
-        f = data['fields'][0].transpose()
+        f = data['fields'][0] #.transpose()
 
         if self.field.GetItems() != data['names']:
             self.field.Set(data['names'])
+
+        if np.all(np.isnan(f)):
+            return
 
         # Update the color map. Keep max/min values to prevent "oscillating"
         # colors which make the features of the flow more difficult to see.

@@ -56,9 +56,6 @@ class DataThread(threading.Thread):
             uncomp += len(buf)
 
             t = np.frombuffer(buf, dtype=md['dtype'])
-
-            print md['shape'], t.shape
-
             md['fields'].append(t.reshape(md['shape']))
 
         # Save the compression ratio.
@@ -104,7 +101,7 @@ class CanvasFrame(wx.Frame):
         self.position = wx.SpinCtrl(self)
         self.position.SetRange(0, 10)
         self.position.SetValue(0)
-        self.Bind(wx.EVT_SPINCTRL, self.OnPositionChange)
+        self.position.Bind(wx.EVT_SPINCTRL, self.OnPositionChange)
 
         # Slice axis control.
         self.axis = wx.ComboBox(self, value='x', choices=['x', 'y', 'z'],
@@ -115,7 +112,7 @@ class CanvasFrame(wx.Frame):
         self.every = wx.SpinCtrl(self)
         self.every.SetRange(1, 100000)
         self.every.SetValue(25)
-        self.Bind(wx.EVT_SPINCTRL, self.OnEveryChange)
+        self.every.Bind(wx.EVT_SPINCTRL, self.OnEveryChange)
 
         # Field selector.
         self.field = wx.ComboBox(self, value='vx', choices=['vx'],
@@ -187,7 +184,6 @@ class CanvasFrame(wx.Frame):
         assert self._sock.recv_string() == 'ack'
 
     def OnAxisSelect(self, event):
-        print 'axis update'
         self._cmd('position', 0)
         self._cmd('axis', event.GetSelection())
         self._reset_colorscale()

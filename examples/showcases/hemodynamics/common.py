@@ -116,6 +116,8 @@ class UnitConverter(object):
 
 
 class InflowOutflowSubdomain(Subdomain3D):
+    flow_orient = D3Q19.vec_to_dir([0, 1, 0])
+
     # Override this to return a boolean array selecting inflow
     # and outflow nodez, or None if the inflow/outflow is not contained in
     # the current subdomain. wall_map is the part of the global wall map
@@ -169,7 +171,6 @@ class InflowOutflowSubdomain(Subdomain3D):
         self.set_node(wall_map, NTFullBBWall)
         # Vector pointing into the flow domain. The direction of the
         # flow is y+.
-        o = D3Q19.vec_to_dir([0, 1, 0])
         if inlet is not None:
             xm, zm, diam = self._velocity_params(hx, hy, hz, wall_map)
             radius_sq = (diam / 2.0)**2
@@ -181,12 +182,14 @@ class InflowOutflowSubdomain(Subdomain3D):
                              2.0 * v *
                              (1.0 - ((S.gz - zm)**2 + (S.gx - xm)**2) / radius_sq),
                              0.0),
-                orientation=o))
+                orientation=self._flow_orient))
 
         if outlet is not None:
             self.config.logger.info('.. setting outlet')
-            self.set_node(outlet, NTDoNothing(orientation=o))
+            self._set_outlet(outlet, hx, hy, hz)
 
+    def _set_outlet(self, outlet, hx, hy, hz):
+        self.set_node(outlet, NTDoNothing(orientation=self._flow_orient))
 
     def initial_conditions(self, sim, hx, hy, hz):
         sim.rho[:] = 1.0

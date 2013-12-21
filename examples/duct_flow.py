@@ -57,7 +57,7 @@ class DuctSubdomain(Subdomain3D):
         ry = np.abs(a - hy)
         rx = np.abs(a - hx)
 
-
+        prefactor = 16 * a**2 / (config.visc * np.pi**3)
         ii = np.arange(1, 100, 2)
         ret = np.zeros_like(hy)
         for i in ii:
@@ -92,7 +92,7 @@ class DuctSim(LBFluidSim, LBForcedSim):
     def __init__(self, config):
         super(DuctSim, self).__init__(config)
         # The flow is driven by a body force.
-        self.add_body_force((0.0, 0.0, accel = DuctSubdomain.accel(config)))
+        self.add_body_force((0.0, 0.0, DuctSubdomain.accel(config)))
 
         a = DuctSubdomain.width(config) / 2.0
         self.config.logger.info('Re = %.2f' % (a * DuctSubdomain.max_v / config.visc))
@@ -113,7 +113,7 @@ class DuctSim(LBFluidSim, LBForcedSim):
             # Output data useful for monitoring the state of the simulation.
             m = runner._output._fluid_map
             l2 = (np.linalg.norm(self._ref[m] - runner._sim.vz[m]) /
-                  np.linalg.norm(self._ref[m])
+                  np.linalg.norm(self._ref[m]))
             print self.iteration, l2, np.nanmax(runner._sim.vz)
 
 

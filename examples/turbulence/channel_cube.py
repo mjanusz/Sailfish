@@ -45,16 +45,6 @@ from channel_flow import ChannelSubdomain, ChannelSim
 import scipy.ndimage.filters
 
 
-class CubeSubdomainSpec3D(SubdomainSpec3D):
-    def connect(self, pair, grid=None):
-        # Do not actually create a connection between the recirculation buffer
-        # and actual simulation domain.
-        if ((self.id == 0 and pair.real.id == 1) or
-            (self.id == 1 and pair.real.id == 0)):
-            return True
-        return super(CubeSubdomainSpec3D, self).connect(pair, grid)
-
-
 class CubeChannelGeometry(LBGeometry3D):
     @classmethod
     def add_options(cls, group):
@@ -75,7 +65,7 @@ class CubeChannelGeometry(LBGeometry3D):
         c = self.config
 
         # Recirculation buffer.
-        buf = CubeSubdomainSpec3D((0, 0, 0), (c.lat_nx, c.lat_ny, self.buf_nz(c)))
+        buf = SubdomainSpec3D((0, 0, 0), (c.lat_nx, c.lat_ny, self.buf_nz(c)))
         # Enable PBC along the Z axis.
         buf.enable_local_periodicity(2)
         ret = [buf]
@@ -86,8 +76,8 @@ class CubeChannelGeometry(LBGeometry3D):
         dz = self.main_nz(c) / n
         rz = self.main_nz(c) % n
         for i in range(0, n):
-            ret.append(CubeSubdomainSpec3D((0, 0, z),
-                                           (c.lat_nx, c.lat_ny, dz if i < n - 1 else dz + rz)))
+            ret.append(SubdomainSpec3D((0, 0, z),
+                                       (c.lat_nx, c.lat_ny, dz if i < n - 1 else dz + rz)))
             z += dz
         return ret
 
@@ -128,71 +118,79 @@ def ceil_div(x, y):
 
 
 class CubeSubdomainRunner(SubdomainRunner):
-    def _recv_dists_direct(self):
-        if self._spec.id <= 1:
-            assert self._sim._recirculation_sock.recv() == 'ready'
-            if self._spec.id == 1:
-                self.backend.run_kernel(self._sim._recirc_kernel,
-                                        [ceil_div(NX + 2, self.config.block_size), NY + 2],
-                                        self._data_stream)
-
-    def _recv_dists_indirect(self):
-        if self._spec.id == 1:
-            msg = self._sim._recirculation_sock.recv()
-            self._sim._recv_recirc_buf[:] = np.frombuffer(buffer(msg), dtype=np.float32)
-            self.backend.to_buf(self._sim._gpu_recv_recirc_buf)
-            self.backend.sync_stream(self._data_stream, self._calc_stream)
-            if self._sim.iteration & 1:
-              self.backend.run_kernel(self._sim._recv_recirc_kernel_b,
-                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-            else:
-              self.backend.run_kernel(self._sim._recv_recirc_kernel_a,
-                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-        elif self._spec.id == 0:
-            assert self._sim._recirculation_sock.recv() == 'ready'
-
-    def _recv_dists(self):
-        # Called with updated sim.iteration both on the host and on the device.
-        done = False
-        while not done:
-            try:
-                if self._sim._recirc_direct:
-                    self._recv_dists_direct()
-                else:
-                    self._recv_dists_indirect()
-                done = True
-            except zmq.ZMQError:
-                pass
-
-        return super(CubeSubdomainRunner, self)._recv_dists()
-
-    def _send_dists_direct(self):
-        if self._spec.id <= 1:
-            if self._spec.id == 0:
-                self.backend.sync_stream(self._data_stream)
-            self._sim._recirculation_sock.send('ready')
-
-    def _send_dists_indirect(self):
+    def _init_distrib_kernels(self, *args, **kwargs):
+        # No distribution in the recirculation buffer.
         if self._spec.id == 0:
-            if self._sim.iteration & 1:
-                self.backend.run_kernel(self._sim._coll_recirc_kernel_b,
-                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-            else:
-                self.backend.run_kernel(self._sim._coll_recirc_kernel_a,
-                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-
-            self.backend.from_buf(self._sim._gpu_coll_recirc_buf)
-            self._sim._recirculation_sock.send(self._sim._coll_recirc_buf)
-        if self._spec.id == 1:
-            self._sim._recirculation_sock.send('ready')
-
-    def _send_dists(self):
-        # Called with updated sim.iteration on the *host* only.
-        if self._sim._recirc_direct:
-            self._send_dists_direct()
+            return [], []
         else:
-            self._send_dists_indirect()
-        return super(CubeSubdomainRunner, self)._send_dists()
+            super(CubeSubdomainRunner, self)._init_distrib_kernels(*args,
+                                                                   **kwargs)
+
+#    def _recv_dists_direct(self):
+#        if self._spec.id <= 1:
+#            assert self._sim._recirculation_sock.recv() == 'ready'
+#            if self._spec.id == 1:
+#                self.backend.run_kernel(self._sim._recirc_kernel,
+#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2],
+#                                        self._data_stream)
+#
+#    def _recv_dists_indirect(self):
+#        if self._spec.id == 1:
+#            msg = self._sim._recirculation_sock.recv()
+#            self._sim._recv_recirc_buf[:] = np.frombuffer(buffer(msg), dtype=np.float32)
+#            self.backend.to_buf(self._sim._gpu_recv_recirc_buf)
+#            self.backend.sync_stream(self._data_stream, self._calc_stream)
+#            if self._sim.iteration & 1:
+#              self.backend.run_kernel(self._sim._recv_recirc_kernel_b,
+#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
+#            else:
+#              self.backend.run_kernel(self._sim._recv_recirc_kernel_a,
+#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
+#        elif self._spec.id == 0:
+#            assert self._sim._recirculation_sock.recv() == 'ready'
+#
+#    def _recv_dists(self):
+#        # Called with updated sim.iteration both on the host and on the device.
+#        done = False
+#        while not done:
+#            try:
+#                if self._sim._recirc_direct:
+#                    self._recv_dists_direct()
+#                else:
+#                    self._recv_dists_indirect()
+#                done = True
+#            except zmq.ZMQError:
+#                pass
+#
+#        return super(CubeSubdomainRunner, self)._recv_dists()
+#
+#    def _send_dists_direct(self):
+#        if self._spec.id <= 1:
+#            if self._spec.id == 0:
+#                self.backend.sync_stream(self._data_stream)
+#            self._sim._recirculation_sock.send('ready')
+#
+#    def _send_dists_indirect(self):
+#        if self._spec.id == 0:
+#            if self._sim.iteration & 1:
+#                self.backend.run_kernel(self._sim._coll_recirc_kernel_b,
+#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
+#            else:
+#                self.backend.run_kernel(self._sim._coll_recirc_kernel_a,
+#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
+#
+#            self.backend.from_buf(self._sim._gpu_coll_recirc_buf)
+#            self._sim._recirculation_sock.send(self._sim._coll_recirc_buf)
+#        if self._spec.id == 1:
+#            self._sim._recirculation_sock.send('ready')
+#
+#    def _send_dists(self):
+#        # Called with updated sim.iteration on the *host* only.
+#        if self._sim._recirc_direct:
+#            self._send_dists_direct()
+#        else:
+#            self._send_dists_indirect()
+#        return super(CubeSubdomainRunner, self)._send_dists()
 
 
 class CubeChannelSim(ChannelSim):

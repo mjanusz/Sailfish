@@ -191,6 +191,7 @@ class CubeChannelSim(ChannelSim):
                 'PP', needs_iteration=True)
 
         self._prepare_reynolds_stats_global(runner)
+        self._prepare_reynolds_stats_slice(runner)
 
     def _prepare_reynolds_stats_slice(self, runner):
         num_stats = 3 * 2 + 3
@@ -222,15 +223,14 @@ class CubeChannelSim(ChannelSim):
         self._gpu_stats_bufs.append(gpu_bufs)
 
         gpu_v = runner.gpu_field(self.v)
-        for i, y in enumerate((0, 0.1 * c.lat_ny, 0.25 * c.lat_ny, 0.5 * c.lat_ny, 0.75 *
-                  c.lat_ny)):
-            k = runner.get_kernel('ReynoldsX64', [int(y)] + gpu_v +
+        for i, y in enumerate((0, 0.1 * c.lat_ny, 0.25 * c.lat_ny, 0.5 * c.lat_ny, 0.75 * c.lat_ny)):
+            k = runner.get_kernel('Reynolds64', [0, int(y)] + gpu_v +
                                   self._gpu_stats_bufs[i], 'iPPP' + 'P' *
                                   num_stats, block_size=(128,))
             self._x_stats_kern.append(k)
 
         self._y_stats_kern = runner.get_kernel(
-            'ReynoldsY64', [c.lat_ny / 2] + gpu_v + self._gpu_stats_bufs[-1],
+            'Reynolds64', [1, c.lat_ny / 2] + gpu_v + self._gpu_stats_bufs[-1],
             'iPPP' + 'P' * num_stats, block_size=(128,))
 
     def _prepare_reynolds_stats_global(self, runner):

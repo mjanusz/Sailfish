@@ -10,27 +10,42 @@ area.
 
   buffer:               main:
 =============|==========================O
-            R|R                         O
-            R|R                         O
-            R|R                         O
-            R|R                         O
+P            >                          O
+P            >                          O
+P            >                          O
+P            >                          O
 =============|==========================O
 
 Legend:
  | - subdomain boundary
+ P - PBC within the buffer subdomain
+ > - PBC within the buffer subdomain; data is transferred from buffer to main,
+     but not vice-versa
  = - wall
  R - replicated node (all distributions are synced from buffer to main after
      every step
  O - outflow nodes
+
+Reference data is for Re_m = 5610. The original geometry is (current values are
+provided in the :
+ X - streamwise (Z)
+ Y - channel height (X)
+ Z - spanwise (Y)
+
+Available measurements:
+ - streamlines / pressure in the X-Y symmetry plane
+ - streamlines / pressure in the X-Z plane at y/h = 0.003
+ - streamlines in the X-Z plane at y/h = 0.1, 0.25, 0.5, 0.75
+ - streamwise vorticity in the Y-Z plane at x/h = 3.11, 3.50, 3.91 (horse-shoe
+   vortex)
+ - streamwise velocity in the symmetry plane at y/h = 0.1, 0.31, 0.5, 0.69, 0.9
+ - power spectrum of the spanwise velocity in the rear wake
+ - Reynolds stresses in the X-Y symmetry plane (u'^2, v'^2, w'^2)
+ - turbulent kinetic energy in the X-Z plane at y/h = 0.1, 0.25, 0.50, 0.75
+   TKE = 0.5 (u'^2 + v'^2 + w'^2)
 """
 
-# TODO:
-#  single axis averaging
-#  measurement point for Strouhal
-
 import math
-import tempfile
-import zmq
 import numpy as np
 from sailfish.node_type import NTHalfBBWall, NTDoNothing, NTCopy, NTEquilibriumDensity, NTFullBBWall
 from sailfish.geo import LBGeometry3D
@@ -104,10 +119,6 @@ class CubeChannelSubdomain(ChannelSubdomain):
         self.set_node(outlet_map, NTEquilibriumDensity(1.0))
 
 
-def ceil_div(x, y):
-    return (x + y - 1) / y
-
-
 class CubeChannelSubdomainRunner(SubdomainRunner):
     def _init_distrib_kernels(self, *args, **kwargs):
         # No distribution in the recirculation buffer.
@@ -158,7 +169,7 @@ class CubeChannelSim(ChannelSim):
         config.lat_ny = int(config.ay * cube_h)  # spanwise (PBC)
         config.lat_nz = (int(config.buf_az * cube_h) +
                          int(config.main_az * cube_h))  # streamwise
-        config.visc = cls.subdomain.u_tau(config.Re_tau) * config.H / config.Re_tau
+        config.visc = cls.subdomain.u_tau(config.Re_tau) * 2.0 * config.H / config.Re_tau
 
         cls.show_info(config)
 
@@ -173,69 +184,17 @@ class CubeChannelSim(ChannelSim):
     @classmethod
     def add_options(cls, group, dim):
         ChannelSim.add_options(group, dim)
+        # The reference DNS simulation uses: 9, 14, 6.4, respectively.
         group.add_argument('--buf_az', type=float, default=9.0)
-        group.add_argument('--main_az', type=float, default=8.0)
+        group.add_argument('--main_az', type=float, default=14.0)
         group.add_argument('--ay', type=float, default=6.4)
 
     def before_main_loop(self, runner):
-        return
-
-############################################################
-# Disabled code blow this line
-############################################################
-
-        if runner._spec.id == 1:
-            self._ntcopy_kernel = runner.get_kernel(
-                'HandleNTCopyNodes',
-                [runner.gpu_geo_map(), runner.gpu_dist(0, 0)],
-                'PP', needs_iteration=True)
-
         self._prepare_reynolds_stats_global(runner)
-        self._prepare_reynolds_stats_slice(runner)
-
-    def _prepare_reynolds_stats_slice(self, runner):
-        num_stats = 3 * 2 + 3
-        self._stats_bufs = []
-        self._gpu_stats_bufs = []
-        self._x_stats_kern = []
-        c = self.config
-
-        for i in range(5):
-            bufs = []
-            gpu_bufs = []
-
-            for j in range(num_stats):
-                h = np.zeros([c.lat_ny * c.lat_nz], dtype=np.float64)
-                bufs.append(h)
-                gpu_bufs.append(runner.backend.alloc_buf(like=h))
-
-            self._stats_bufs.append(bufs)
-            self._gpu_stats_bufs.append(gpu_bufs)
-
-        bufs = []
-        gpu_bufs = []
-        for j in range(num_stats):
-            h = np.zeros([c.lat_nx * c.lat_nz], dtype=np.float64)
-            bufs.append(h)
-            gpu_bufs.append(runner.backend.alloc_buf(like=h))
-
-        self._stats_bufs.append(bufs)
-        self._gpu_stats_bufs.append(gpu_bufs)
-
-        gpu_v = runner.gpu_field(self.v)
-        for i, y in enumerate((0, 0.1 * c.lat_ny, 0.25 * c.lat_ny, 0.5 * c.lat_ny, 0.75 * c.lat_ny)):
-            k = runner.get_kernel('Reynolds64', [0, int(y)] + gpu_v +
-                                  self._gpu_stats_bufs[i], 'iPPP' + 'P' *
-                                  num_stats, block_size=(128,))
-            self._x_stats_kern.append(k)
-
-        self._y_stats_kern = runner.get_kernel(
-            'Reynolds64', [1, c.lat_ny / 2] + gpu_v + self._gpu_stats_bufs[-1],
-            'iPPP' + 'P' * num_stats, block_size=(128,))
 
     def _prepare_reynolds_stats_global(self, runner):
+        # All components of the Reynolds stress tensor and mean velocities.
         num_stats = 3 * 2 + 3
-
         self._stats = []
         self._gpu_stats = []
 
@@ -249,28 +208,30 @@ class CubeChannelSim(ChannelSim):
         self._stats_kern = runner.get_kernel(
             'ReynoldsGlobal', gpu_v + self._gpu_stats, 'PPP' + 'P' * num_stats)
 
-
-
+    max_stats = 10000
     num_stats = 0
     def _collect_stats(self, runner):
-#        runner.backend.run_kernel(self._y_stats_kern, [ceil_div()
         runner.backend.run_kernel(self._stats_kern, runner._kernel_grid_full)
         self.num_stats += 1
 
-        if self.num_stats == 10000:
+        # Periodically dump the data.
+        if self.num_stats == self.max_stats:
             for gpu_buf in self._gpu_stats:
                 runner.backend.from_buf(gpu_buf)
+
+            # The order of the statistics collected here has to match the
+            # definition in reynolds_statistics.mako.
             np.savez('%s_reyn_stat_%s.%s' % (self.config.output, runner._spec.id,
                                              self.iteration),
-                     ux_m1=self._stats[0],
-                     ux_m2=self._stats[1],
-                     uy_m1=self._stats[2],
-                     uy_m2=self._stats[3],
-                     uz_m1=self._stats[4],
-                     uz_m2=self._stats[5],
-                     ux_uy=self._stats[6],
-                     ux_uz=self._stats[7],
-                     uy_uz=self._stats[8])
+                     ux_m1=self._stats[0] / self.num_stats,
+                     ux_m2=self._stats[1] / self.num_stats,
+                     uy_m1=self._stats[2] / self.num_stats,
+                     uy_m2=self._stats[3] / self.num_stats,
+                     uz_m1=self._stats[4] / self.num_stats,
+                     uz_m2=self._stats[5] / self.num_stats,
+                     ux_uy=self._stats[6] / self.num_stats,
+                     ux_uz=self._stats[7] / self.num_stats,
+                     uy_uz=self._stats[8] / self.num_stats)
 
             self.num_stats = 0
             for buf in self._stats:
@@ -279,30 +240,15 @@ class CubeChannelSim(ChannelSim):
                 runner.backend.to_buf(gpu_buf)
 
     def after_step(self, runner):
-        return
+        # Allow 2 flow-through times to remove transients.
+        transients = 2 * self.t_flow(self.config)
+        transients = ((transients + self.max_stats - 1) / self.max_stats) * self.max_stats
 
-        # Handle NTCopy nodes in the AA access pattern.
-        if self.config.access_pattern == 'AA' and runner._spec.id == 1:
-            runner.backend.run_kernel(self._ntcopy_kernel,
-                                      [ceil_div(NX + 2, self.config.block_size), NY + 2])
-
-
-# averaged data on slices:
-#  - symmetry
-#  - y/h = 0.003, 0.1, 0.25, 0.5, 0.75
-
-# reynolds stresses:
-#  - symmetry plane
-#  - TKE at y/h = 0.1m 0.25, 0.5, 0.75
-#  -> TKE = 0.5 (u'^2 + v'^2 + w'^2)
-
-# average data on lines:
-#  - streamwise velocity in the symmetry plane
-
-
-        if self.iteration < 500000 or runner._spec.id != 1:
+        # Do not generate stats for the recirculation buffer.
+        if self.iteration < transients or runner._spec.id == 0:
             return
 
+        # How often to collect data for the Reynolds stats.
         every = 10
         mod = self.iteration % every
 
@@ -313,7 +259,5 @@ class CubeChannelSim(ChannelSim):
 
 
 if __name__ == '__main__':
-#    TMPDIR = tempfile.mkdtemp()
     ctrl = LBSimulationController(CubeChannelSim, CubeChannelGeometry)
     ctrl.run()
-

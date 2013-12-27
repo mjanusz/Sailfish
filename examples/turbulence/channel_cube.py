@@ -32,7 +32,7 @@ import math
 import tempfile
 import zmq
 import numpy as np
-from sailfish.node_type import NTHalfBBWall, NTDoNothing, NTCopy
+from sailfish.node_type import NTHalfBBWall, NTDoNothing, NTCopy, NTEquilibriumDensity, NTFullBBWall
 from sailfish.geo import LBGeometry3D
 from sailfish.controller import LBSimulationController, GeometryError
 from sailfish.subdomain import Subdomain3D, SubdomainSpec3D
@@ -83,6 +83,8 @@ class CubeChannelGeometry(LBGeometry3D):
 
 
 class CubeChannelSubdomain(ChannelSubdomain):
+    wall_bc = NTFullBBWall
+
     def boundary_conditions(self, hx, hy, hz):
         # Channel walls.
         wall_map = ((hx == 0) | (hx == self.gx - 1))
@@ -99,104 +101,26 @@ class CubeChannelSubdomain(ChannelSubdomain):
 
         # Outlet
         outlet_map = (hz == self.gz - 1) & np.logical_not(wall_map)
-        self.set_node(outlet_map, NTCopy)
-
-    def select_subdomain(self, field, hx, hy, hz):
-        if self.spec.id == 0:
-            return super(CubeChannelSubdomain, self).select_subdomain(field, hx, hy, hz)
-        else:
-            x0, x1 = np.min(hx), np.max(hx)
-            y0, y1 = np.min(hy), np.max(hy)
-            z0, z1 = np.min(hz), np.max(hz)
-            # Shift in the by one in the Z direction to accomodate the
-            # node layer replicated from the recirculation buffer.
-            return field[z0-1:z1, y0:y1+1, x0:x1+1]
+        self.set_node(outlet_map, NTEquilibriumDensity(1.0))
 
 
 def ceil_div(x, y):
     return (x + y - 1) / y
 
 
-class CubeSubdomainRunner(SubdomainRunner):
+class CubeChannelSubdomainRunner(SubdomainRunner):
     def _init_distrib_kernels(self, *args, **kwargs):
         # No distribution in the recirculation buffer.
         if self._spec.id == 0:
             return [], []
         else:
-            super(CubeSubdomainRunner, self)._init_distrib_kernels(*args,
-                                                                   **kwargs)
-
-#    def _recv_dists_direct(self):
-#        if self._spec.id <= 1:
-#            assert self._sim._recirculation_sock.recv() == 'ready'
-#            if self._spec.id == 1:
-#                self.backend.run_kernel(self._sim._recirc_kernel,
-#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2],
-#                                        self._data_stream)
-#
-#    def _recv_dists_indirect(self):
-#        if self._spec.id == 1:
-#            msg = self._sim._recirculation_sock.recv()
-#            self._sim._recv_recirc_buf[:] = np.frombuffer(buffer(msg), dtype=np.float32)
-#            self.backend.to_buf(self._sim._gpu_recv_recirc_buf)
-#            self.backend.sync_stream(self._data_stream, self._calc_stream)
-#            if self._sim.iteration & 1:
-#              self.backend.run_kernel(self._sim._recv_recirc_kernel_b,
-#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-#            else:
-#              self.backend.run_kernel(self._sim._recv_recirc_kernel_a,
-#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-#        elif self._spec.id == 0:
-#            assert self._sim._recirculation_sock.recv() == 'ready'
-#
-#    def _recv_dists(self):
-#        # Called with updated sim.iteration both on the host and on the device.
-#        done = False
-#        while not done:
-#            try:
-#                if self._sim._recirc_direct:
-#                    self._recv_dists_direct()
-#                else:
-#                    self._recv_dists_indirect()
-#                done = True
-#            except zmq.ZMQError:
-#                pass
-#
-#        return super(CubeSubdomainRunner, self)._recv_dists()
-#
-#    def _send_dists_direct(self):
-#        if self._spec.id <= 1:
-#            if self._spec.id == 0:
-#                self.backend.sync_stream(self._data_stream)
-#            self._sim._recirculation_sock.send('ready')
-#
-#    def _send_dists_indirect(self):
-#        if self._spec.id == 0:
-#            if self._sim.iteration & 1:
-#                self.backend.run_kernel(self._sim._coll_recirc_kernel_b,
-#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-#            else:
-#                self.backend.run_kernel(self._sim._coll_recirc_kernel_a,
-#                                        [ceil_div(NX + 2, self.config.block_size), NY + 2])
-#
-#            self.backend.from_buf(self._sim._gpu_coll_recirc_buf)
-#            self._sim._recirculation_sock.send(self._sim._coll_recirc_buf)
-#        if self._spec.id == 1:
-#            self._sim._recirculation_sock.send('ready')
-#
-#    def _send_dists(self):
-#        # Called with updated sim.iteration on the *host* only.
-#        if self._sim._recirc_direct:
-#            self._send_dists_direct()
-#        else:
-#            self._send_dists_indirect()
-#        return super(CubeSubdomainRunner, self)._send_dists()
+            return super(CubeChannelSubdomainRunner, self)._init_distrib_kernels(
+                *args, **kwargs)
 
 
 class CubeChannelSim(ChannelSim):
     subdomain = CubeChannelSubdomain
-    subdomain_runner = CubeSubdomainRunner
-    aux_code = ['recirculation_buffer.mako']
+    subdomain_runner = CubeChannelSubdomainRunner
 
     @classmethod
     def update_defaults(cls, defaults):
@@ -214,7 +138,6 @@ class CubeChannelSim(ChannelSim):
             # Performance tuning.
             'check_invalid_results_gpu': True,
             'block_size': 128,
-            'conn_axis': 'z',
 
             # Output.
             'max_iters': 3500000,
@@ -242,17 +165,17 @@ class CubeChannelSim(ChannelSim):
     @classmethod
     def show_info(cls, config):
         cube_h = config.H * 2 / 3
-        print 'cube:   %d' % config.cube_h
+        print 'cube:   %d' % cube_h
         print 'buffer: %d x %d x %d' % (int(config.buf_az * cube_h), config.lat_ny, config.lat_nx)
         print 'main:   %d x %d x %d' % (int(config.main_az * cube_h), config.lat_ny, config.lat_nx)
-        ChannelSubdomain.show_info(config)
+        ChannelSim.show_info(config)
 
     @classmethod
     def add_options(cls, group, dim):
         ChannelSim.add_options(group, dim)
         group.add_argument('--buf_az', type=float, default=9.0)
         group.add_argument('--main_az', type=float, default=8.0)
-        gorup.add_argument('--ay', type=float, default=6.4)
+        group.add_argument('--ay', type=float, default=6.4)
 
     def before_main_loop(self, runner):
         return
@@ -261,7 +184,6 @@ class CubeChannelSim(ChannelSim):
 # Disabled code blow this line
 ############################################################
 
-        self.init_indirect(runner)
         if runner._spec.id == 1:
             self._ntcopy_kernel = runner.get_kernel(
                 'HandleNTCopyNodes',
@@ -269,61 +191,6 @@ class CubeChannelSim(ChannelSim):
                 'PP', needs_iteration=True)
 
         self._prepare_reynolds_stats_global(runner)
-
-    def init_indirect(self, runner):
-        """For copying data over the network."""
-        if runner._spec.id <= 1:
-            sock = runner._ctx.socket(zmq.PAIR)
-            self._recirc_direct = False
-            buf_size = runner._lat_size[-1] * runner._lat_size[-2] * self.grid.Q
-        if runner._spec.id == 0:
-            sock.connect('ipc://%s/recirculation' % TMPDIR)
-            self._coll_recirc_buf = np.zeros(buf_size, dtype=np.float32)
-            self._gpu_coll_recirc_buf = runner.backend.alloc_buf(like=self._coll_recirc_buf)
-            self._recirculation_sock = sock
-            self._coll_recirc_kernel_a = runner.get_kernel(
-                'CollectDataFromRecirculationBuffer',
-                [runner.gpu_dist(0, 0), self._gpu_coll_recirc_buf, BUF_LEN],
-                'PPi', needs_iteration=True)
-            self._coll_recirc_kernel_b = runner.get_kernel(
-                'CollectDataFromRecirculationBuffer',
-                [runner.gpu_dist(0, 1), self._gpu_coll_recirc_buf, BUF_LEN],
-                'PPi', needs_iteration=True)
-        elif runner._spec.id == 1:
-            sock.bind('ipc://%s/recirculation' % TMPDIR)
-            self._recv_recirc_buf = np.zeros(buf_size, dtype=np.float32)
-            self._gpu_recv_recirc_buf = runner.backend.alloc_buf(like=self._recv_recirc_buf)
-            self._recirculation_sock = sock
-            self._recv_recirc_kernel_a = runner.get_kernel(
-                'DistributeDataFromRecirculationBuffer',
-                [self._gpu_recv_recirc_buf, runner.gpu_dist(0, 0)],
-                'PP', needs_iteration=True)
-            self._recv_recirc_kernel_b = runner.get_kernel(
-                'DistributeDataFromRecirculationBuffer',
-                [self._gpu_recv_recirc_buf, runner.gpu_dist(0, 1)],
-                'PP', needs_iteration=True)
-
-    def init_direct(self, runner):
-        """For direct memory reads."""
-        assert self.config.access_pattern == 'AA'
-        sock = runner._ctx.socket(zmq.PAIR)
-        self._recirc_direct = True
-        if runner._spec.id == 0:
-            sock.connect('ipc://%s/recirculation' % TMPDIR)
-            sock.send_pyobj(runner.backend.ipc_handle(
-                runner.gpu_dist(0, 0)), runner._get_nodes())
-            self._recirculation_sock = sock
-            # for AB mode, unused
-            # runner.gpu_dist(0, 1)
-        elif runner._spec.id == 1:
-            sock.bind('ipc://%s/recirculation' % TMPDIR)
-            recirculation_dist, dist_size = sock.recv_pyobj()
-            recirculation_dist = runner.backend.ipc_handle_wrap(recirculation_dist)
-            self._recirculation_sock = sock
-            self._recirc_kernel = runner.get_kernel(
-                'CopyDataFromRecirculationBuffer',
-                [recirculation_dist, runner.gpu_dist(0, 0), BUF_LEN, dist_size],
-                'PPii', needs_iteration=True)
 
     def _prepare_reynolds_stats_slice(self, runner):
         num_stats = 3 * 2 + 3

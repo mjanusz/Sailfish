@@ -199,7 +199,7 @@ class CubeChannelSim(ChannelSim):
         self._gpu_stats = []
 
         for i in range(0, num_stats):
-            f = runner.make_scalar_field(dtype=np.float64, register=False)
+            f, _ = runner.make_scalar_field(dtype=np.float64, register=False)
             f[:] = 0.0
             self._stats.append(f)
             self._gpu_stats.append(runner.backend.alloc_buf(like=runner.field_base(f)))

@@ -169,7 +169,7 @@ class CubeChannelSim(ChannelSim):
         config.lat_ny = int(config.ay * cube_h)  # spanwise (PBC)
         config.lat_nz = (int(config.buf_az * cube_h) +
                          int(config.main_az * cube_h))  # streamwise
-        config.visc = cls.subdomain.u_tau(config.Re_tau) * 2.0 * config.H / config.Re_tau
+        config.visc = cls.subdomain.u_tau(config.Re_tau) * config.H / config.Re_tau
 
         cls.show_info(config)
 

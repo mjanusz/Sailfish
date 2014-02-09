@@ -55,6 +55,7 @@ from sailfish.stats import ReynoldsStatsMixIn
 from sailfish.subdomain_runner import SubdomainRunner
 from sailfish.lb_single import LBFluidSim
 from sailfish.lb_base import LBForcedSim
+from sailfish.sym import D3Q19
 
 from channel_flow import ChannelSubdomain, ChannelSim
 import scipy.ndimage.filters
@@ -67,14 +68,17 @@ class CubeChannelGeometry(LBGeometry3D):
         group.add_argument('--subdomains', help='number of subdomains for '
                            'the real simulation region',
                            type=int, default=1)
+    @staticmethod
+    def cube_h(config):
+        return config.H * 2 / 3
 
-    @classmethod
-    def buf_nz(cls, config):
-        return int(config.buf_az * config.H * 2 / 3)
+    @staticmethod
+    def buf_nz(config):
+        return int(config.buf_az * CubeChannelGeometry.cube_h(config))
 
-    @classmethod
-    def main_nz(cls, config):
-        return int(config.main_az * config.H * 2 / 3)
+    @staticmethod
+    def main_nz(config):
+        return int(config.main_az * CubeChannelGeometry.cube_h(config))
 
     def subdomains(self):
         c = self.config
@@ -116,7 +120,8 @@ class CubeChannelSubdomain(ChannelSubdomain):
 
         # Outlet
         outlet_map = (hz == self.gz - 1) & np.logical_not(wall_map)
-        self.set_node(outlet_map, NTEquilibriumDensity(1.0))
+        self.set_node(outlet_map, NTEquilibriumDensity(1.0,
+                                                      orientation=D3Q19.vec_to_dir([0,0,-1])))
 
 
 class CubeChannelSubdomainRunner(SubdomainRunner):
@@ -163,7 +168,7 @@ class CubeChannelSim(ChannelSim):
         h = 2 if cls.subdomain.wall_bc.location == 0.5 else 0
 
         # 1/3 of the channel height
-        cube_h = config.H * 2 / 3
+        cube_h = CubeChannelGeometry.cube_h(config)
 
         config.lat_nx = config.H * 2 + h  # wall normal
         config.lat_ny = int(config.ay * cube_h)  # spanwise (PBC)

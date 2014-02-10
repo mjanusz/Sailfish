@@ -103,6 +103,7 @@ class CubeChannelGeometry(LBGeometry3D):
 
 class CubeChannelSubdomain(ChannelSubdomain):
     wall_bc = NTFullBBWall
+    u0 = 0.025
 
     def boundary_conditions(self, hx, hy, hz):
         # Channel walls.

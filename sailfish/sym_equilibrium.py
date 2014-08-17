@@ -116,6 +116,30 @@ def bgk_equilibrium(grid, config, rho=None, rho0=None, order=2):
     return EqDef(out, local_vars=[])
 
 
+def thermal_energy_equilibrium(grid):
+    """
+    Equilibrium for the g_i populations tracking energy, as defined in:
+        Y. Peng, C. Shu, and Y. T. Chew, Simplified thermal lattice Boltzmann
+        model for incompressible thermal flows, Phys. Rev. E 68, 026701 (2003)
+    """
+    # TODO: Extend this for 3D lattices.
+    assert grid.dim == 2
+    assert grid.Q == 9
+    out = []
+
+    for ei, weight in zip(grid.basis, grid.weights):
+        h = -Rational(3, 2) * grid.v.dot(grid.v) / grid.cssq
+        if ei.dot(ei) > 0:
+            h += Rational(9, 2) * ei.dot(grid.v)**2 / grid.cssq**2
+        if ei.dot(ei) == 1:
+            h += Rational(3, 2) + Rational(3, 2) * ei.dot(grid.v) / grid.cssq
+        else:
+            h += 3 + 6 * ei.dot(grid.v) / grid.cssq
+
+        out.append(weight * S.rho * S.energy * h)
+
+    return EqDef(out, local_vars=[])
+
 def elbm_equilibrium(grid):
     """
     Form of the equilibrium defined in Europhys. Lett., 63 (6) pp. 798-804

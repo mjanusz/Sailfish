@@ -1064,6 +1064,9 @@ def _prepare_symbols():
     S.visc = Symbol('visc')
     S.gravity = Symbol('gravity')
 
+    # e = DRT / 2
+    S.energy = Symbol('energy')
+
     # Initial velocity. Use these symbols to refer to the initial velocity
     # (without acceleration correction) in relaxation code.
     S.ivx = Symbol('iv0[0]')

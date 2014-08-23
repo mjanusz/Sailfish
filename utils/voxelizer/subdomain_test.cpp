@@ -118,6 +118,7 @@ TEST(SubdomainConversion, SingleSubdomain) {
 		EXPECT_EQ(Subdomain(iPoint3D(1, 1, 1), iPoint3D(2, 2, 2), 2), res[0]);
 	}
 }
+#endif
 
 TEST(SubdomainConversion, TShapeGeometry) {
 	Geometry<float> geometry;
@@ -128,9 +129,6 @@ TEST(SubdomainConversion, TShapeGeometry) {
 	FlushFluidCache();
 	Octree octree(0);
 	voxelize(geometry, octree, voxel_size, kFluid, kWall);
-
-	return;
-	cout << octree.max_depth() << endl;
 
 	//EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0][0][1][1]));
 	/*  3 2 3
@@ -144,18 +142,9 @@ TEST(SubdomainConversion, TShapeGeometry) {
 	 * heigth = 10
 	 * width = 8
 	 */
-	auto res = ToSubdomains(octree.root());
-	cout << res.size() << endl;
+	auto res = ToSubdomains(octree.root(), octree.max_depth());
 	for (auto t : res) {
 		cout << t.JSON() << ", " << endl;
 	}
 }
 
-/*
-	expand(octree, voxels);
-	cout.write(&(voxels.begin()[0]), voxels.size());
-	cout << endl;
-	cout << octree.max_depth() << endl;
-	cout << NodeLocation(octree.root()[0]) << " " << NodeExtent(octree.root()[0])  << endl;
-*/
-#endif

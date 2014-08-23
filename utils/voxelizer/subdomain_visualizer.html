@@ -31,19 +31,12 @@
 "#38B0DE", "#DB9370", "#ADEAEA", "#5C4033", "#4F2F4F", "#CC3299", "#99CC32"];
 
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-			
+
 			var subdomains = [
-/*
-			{ pos: [1, 0, 0], size: [31, 74, 100] },
-			{ pos: [16, 26, 22], size: [28, 47, 43] },
-			{ pos: [8, 13, 12], size: [28, 59, 52] },
-			{ pos: [0, 17, 1], size: [20, 71, 31] }
-*/			
-			
-/*			{ pos: [0, 0, 2], size: [8, 2, 3] },
-			{ pos: [7, 0, 0], size: [2, 2, 7] },
-			{ pos: [6, 0, 4], size: [2, 2, 3] },
-*/			];
+			{ pos: [48, 0, 0], size: [16, 13, 32] }, { pos: [51, 0, 32], size: [13, 13, 19] },
+			{ pos: [0, 0, 16], size: [52, 13, 16] },
+		//	{ pos: [48, 0, 0], size: [16, 13, 51] },
+			];
 
 			var camera, scene, renderer;
 			var meshes = [];
@@ -58,7 +51,7 @@
 
 				controls = new THREE.TrackballControls( camera );
 				controls.target.set( 0, 0, 0 )
-				
+
 				controls.rotateSpeed = 1.0;
 				controls.zoomSpeed = 1.2;
 				controls.panSpeed = 0.8;

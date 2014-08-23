@@ -92,30 +92,35 @@ void RemoveEmptyAreas(Octree::DNode node) {
 	}
 }
 
-vector<Subdomain> MergeSubdomains(vector<Subdomain> a, vector<Subdomain> b) {
+vector<Subdomain> MergeSubdomains(vector<Subdomain> va, vector<Subdomain> vb) {
 	vector<Subdomain> ret;
 
-	for (int i = 0; i < a.size(); i++) {
+	for (const auto& a : va) {
 		double max_fraction = 0.0;
 		int max_j = -1;
 
-		for (int j = 0; j < b.size(); j++) {
-			auto h = a[i] + b[j];
+		// Find a subdomain from the 'b' set that, if merged, will result
+		// in the largest fill fraction.
+		for (int j = 0; j < vb.size(); j++) {
+			auto h = a + vb[j];
 			if (h.fill_fraction() > max_fraction) {
 				max_j = j;
 				max_fraction = h.fill_fraction();
 			}
 		}
 
+		// Merge with the best found subdomain, if any.
+		// TODO: This can currently lead to overlapping subdomains.
 		if (max_fraction >= kMinFillFraction) {
-			ret.push_back(a[i] + b[max_j]);
-			b.erase(b.begin() + max_j);
+			ret.push_back(a + vb[max_j]);
+			vb.erase(vb.begin() + max_j);
 		} else {
-			ret.push_back(a[i]);
+			ret.push_back(a);
 		}
 	}
 
-	ret.insert(ret.end(), b.begin(), b.end());
+	// Add what remains from the original 'b' set.
+	ret.insert(ret.end(), vb.begin(), vb.end());
 	return ret;
 }
 
@@ -124,7 +129,7 @@ vector<Subdomain> ToSubdomains(const Octree::DNode node, const int max_depth) {
 		if (CountFluidNodes(node, max_depth) == 0) {
 			return vector<Subdomain>();
 		} else {
-			return vector<Subdomain>({Subdomain(node, node.max_depth())});
+			return vector<Subdomain>({Subdomain(node, max_depth)});
 		}
 	}
 

@@ -73,23 +73,31 @@ void OctreeToMatrix(const Octree::DNode& node,
 	}
 }
 
+int ilog2(int v) {
+	int ret = 0;
+	while (v) {
+		ret++;
+		v >>= 1;
+	}
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	Geometry<float> geometry;
-	double voxel_size = 1.0 / 200.0;
+	int num_voxels = 100;
 
 	if (argc < 2) {
-		cerr << "Usage: ./voxelizer <STL file> [voxel_size]" << endl;
+		cerr << "Usage: ./voxelizer <STL file> [num_voxels]" << endl;
 		return -1;
 	}
 
 	if (argc >= 3) {
-		voxel_size = atof(argv[2]);
+		num_voxels = atoi(argv[2]);
 	}
 
 	readSTL(geometry, argv[1]);
 
-	geometry.scaleTo(1.0);
 	std::cout << "Bounding box: "
 	       << geometry.max(0) - geometry.min(0) << " "
 	       << geometry.max(1) - geometry.min(1) << " "
@@ -97,27 +105,31 @@ int main(int argc, char **argv)
 
 	Octree octree(kWall);
 
-	voxelize(geometry, octree, voxel_size, kFluid /* inside */, kWall /* outside */);
+	double max_span = 0.0;
+	for (std::size_t d = 0; d < 3; ++d) {
+		max_span = std::max(max_span, static_cast<double>(geometry.max(d)) -
+				                      static_cast<double>(geometry.min(d)));
+	}
+	const double voxel_size = max_span / num_voxels;
+	std::cout << "Voxel size: " << voxel_size << endl;
 
-	cout << "Tree depth: " << octree.max_depth() << endl;
+	voxelize(geometry, octree, voxel_size, kFluid /* inside */, kWall /* outside */);
+	cout << "Tree depth: actual: " << octree.max_depth() << " want: " << ilog2(num_voxels) << endl;
 
 	iPoint3D pmin(10000, 10000, 10000);
 	iPoint3D pmax(0, 0, 0);
-	FindFluidExtent(octree.root(), octree.max_depth(), &pmin, &pmax);
+	int md = ilog2(num_voxels);
+	FindFluidExtent(octree.root(), md, &pmin, &pmax);
 	cout << "Bounding box: " << pmin << " - " << pmax << endl;
 
 	// At this point we could use expand(octree, voxels), but this is inefficent
 	// for domains that are not cubes. Instead, we use the custom implementation
 	// that only fills the data from [pmin, pmax].
 	Matrix<char, 3u> voxels;
-	OctreeToMatrix(octree, octree.max_depth(), pmin, pmax, &voxels);
+	OctreeToMatrix(octree, md, pmin, pmax, &voxels);
 	SaveAsNumpy(voxels, "test.npy");
 	return 0;
-
-/*	RemoveEmptyAreas(octree.root());
-	cout << octree.root();
-	return 0;
-*/
+#if 0
 	auto subs = ToSubdomains(octree.root());
 	int total_vol = 0;
 	int fluid_vol = 0;
@@ -131,4 +143,5 @@ int main(int argc, char **argv)
 	cout << total_vol << " " << fluid_vol << " " << static_cast<double>(fluid_vol) / total_vol << endl;
 
 	return 0;
+#endif
 }

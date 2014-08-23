@@ -9,6 +9,8 @@
 #include <cvmlcpp/volume/VolumeIO>
 #include <cvmlcpp/volume/Voxelizer>
 
+#include "io.hpp"
+
 using namespace cvmlcpp;
 using namespace std;
 
@@ -93,30 +95,7 @@ int main(int argc, char **argv)
 	config << "\"size\": [" << ext[0] << ", " << ext[1] << ", " << ext[2] << "]}";
 	config.close();
 
-	std::ofstream out(output_fname + ".npy");
-	out << "\x93NUMPY\x01";
-
-	char buf[128] = {0};
-
-	out.write(buf, 1);
-
-	snprintf(buf, 128, "{'descr': 'bool', 'fortran_order': False, 'shape': (%lu, %lu, %lu)}",
-			ext[0], ext[1], ext[2]);
-
-	int i, len = strlen(buf);
-	unsigned short int dlen = (((len + 10) / 16) + 1) * 16;
-
-	for (i = 0; i < dlen - 10 - len; i++) {
-		buf[len+i] = ' ';
-	}
-	buf[len+i] = 0x0;
-	dlen -= 10;
-
-	out.write((char*)&dlen, 2);
-	out << buf;
-
-	out.write(&(voxels.begin()[0]), voxels.size());
-	out.close();
+	SaveAsNumpy(voxels, output_fname);
 
 	// Export a VTK file with the voxelized geometry.
 	// outputVTK(voxels, (output_fname + ".vtk").c_str());

@@ -43,17 +43,20 @@ void OctreeToMatrix(const Octree::DNode& node,
         const int max_depth,
         const iPoint3D& pmin,
         const iPoint3D& pmax,
+        const int pad,
         Matrix<char, 3u> *mtx_ptr) {
     auto& mtx = *mtx_ptr;
     // Prepare the array first.
     if (node.depth() == 0) {
-        std::array<int, 3> size = {pmax.x() - pmin.x() + 1, pmax.y() - pmin.y() + 1, pmax.z() - pmin.z() + 1};
+        std::array<int, 3> size = {pmax.x() - pmin.x() + 1 + 2 * pad,
+                                   pmax.y() - pmin.y() + 1 + 2 * pad,
+                                   pmax.z() - pmin.z() + 1 + 2 * pad};
         mtx.resize(size.data());
         std::fill(mtx.begin(), mtx.end(), kWall);
     }
     if (!node.isLeaf()) {
         for (int i = 0; i < Octree::N; i++) {
-            OctreeToMatrix(node[i], max_depth, pmin, pmax, mtx_ptr);
+            OctreeToMatrix(node[i], max_depth, pmin, pmax, pad, mtx_ptr);
         }
         return;
     }
@@ -64,9 +67,9 @@ void OctreeToMatrix(const Octree::DNode& node,
     const auto loc = NodeLocation(node, max_depth);
     const auto ext = NodeExtent(node, max_depth);
 
-    for (size_t x = loc.x() - pmin.x(); x <= ext.x() - pmin.x(); x++) {
-        for (size_t y = loc.y() - pmin.y(); y <= ext.y() - pmin.y(); y++) {
-            for (size_t z = loc.z() - pmin.z(); z <= ext.z() - pmin.z(); z++) {
+    for (size_t x = loc.x() - pmin.x() + pad; x <= ext.x() - pmin.x() + pad; x++) {
+        for (size_t y = loc.y() - pmin.y() + pad; y <= ext.y() - pmin.y() + pad; y++) {
+            for (size_t z = loc.z() - pmin.z() + pad; z <= ext.z() - pmin.z() + pad; z++) {
                 mtx[x][y][z] = kFluid;
             }
         }
@@ -126,7 +129,9 @@ int main(int argc, char **argv)
     // for domains that are not cubes. Instead, we use the custom implementation
     // that only fills the data from [pmin, pmax].
     Matrix<char, 3u> voxels;
-    OctreeToMatrix(octree, md, pmin, pmax, &voxels);
+    OctreeToMatrix(octree, md, pmin, pmax, 1, &voxels);
+	const std::size_t *ext = voxels.extents();
+    cout << "Array size: " << ext[0] << ", " << ext[1] << ", " << ext[2] << endl;
     SaveAsNumpy(voxels, "test.npy");
     return 0;
 #if 0

@@ -58,24 +58,21 @@ void FlushFluidCache() {
 }
 
 // Returns the number of children fluid nodes.
-int CountFluidNodes(const Octree::DNode& node) {
-
+int CountFluidNodes(const Octree::DNode& node, const int max_depth) {
 	auto it = fluid_cache.find(node.id());
-	if (it != fluid_cache.end()) {
-		return it->second;
-	}
+	if (it != fluid_cache.end()) return it->second;
 
 	int ret = 0;
 	if (node.isLeaf()) {
 		if (node() == kFluid) {
-			return 1;
+			return 1 << (3 * (max_depth - node.depth()));
 		} else {
 			return 0;
 		}
 	}
 
 	for (int i = 0; i < Octree::N; i++) {
-		ret += CountFluidNodes(node[i]);
+		ret += CountFluidNodes(node[i], max_depth);
 	}
 
 	fluid_cache[node.id()] = ret;
@@ -84,11 +81,9 @@ int CountFluidNodes(const Octree::DNode& node) {
 
 // Removes all children nodes that do no contain any fluid.
 void RemoveEmptyAreas(Octree::DNode node) {
-	if (node.isLeaf()) {
-		return;
-	}
+	if (node.isLeaf()) return;
 
-	if (CountFluidNodes(node) == 0) {
+	if (CountFluidNodes(node, node.max_depth()) == 0) {
 		node.collapse(0);
 	} else {
 		for (int i = 0; i < Octree::N; i++) {
@@ -124,19 +119,19 @@ vector<Subdomain> MergeSubdomains(vector<Subdomain> a, vector<Subdomain> b) {
 	return ret;
 }
 
-vector<Subdomain> ToSubdomains(const Octree::DNode node) {
+vector<Subdomain> ToSubdomains(const Octree::DNode node, const int max_depth) {
 	if (node.isLeaf()) {
-		if (CountFluidNodes(node) == 0) {
+		if (CountFluidNodes(node, max_depth) == 0) {
 			return vector<Subdomain>();
 		} else {
 			return vector<Subdomain>({Subdomain(node, node.max_depth())});
 		}
 	}
 
-	auto p1 = MergeSubdomains(ToSubdomains(node[0]), ToSubdomains(node[1]));
-	auto p2 = MergeSubdomains(ToSubdomains(node[2]), ToSubdomains(node[3]));
-	auto p3 = MergeSubdomains(ToSubdomains(node[4]), ToSubdomains(node[5]));
-	auto p4 = MergeSubdomains(ToSubdomains(node[6]), ToSubdomains(node[7]));
+	auto p1 = MergeSubdomains(ToSubdomains(node[0], max_depth), ToSubdomains(node[1], max_depth));
+	auto p2 = MergeSubdomains(ToSubdomains(node[2], max_depth), ToSubdomains(node[3], max_depth));
+	auto p3 = MergeSubdomains(ToSubdomains(node[4], max_depth), ToSubdomains(node[5], max_depth));
+	auto p4 = MergeSubdomains(ToSubdomains(node[6], max_depth), ToSubdomains(node[7], max_depth));
 
 	auto p5 = MergeSubdomains(p1, p2);
 	auto p6 = MergeSubdomains(p3, p4);

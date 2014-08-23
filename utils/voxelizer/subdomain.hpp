@@ -19,13 +19,15 @@ typedef DTree<char, 3u> Octree;
 
 iPoint3D NodeLocation(const Octree::DNode& node, const int max_depth);
 iPoint3D NodeExtent(const Octree::DNode& node, const int max_depth);
-int CountFluidNodes(const Octree::DNode& node);
+int CountFluidNodes(const Octree::DNode& node, const int max_depth);
 void RemoveEmptyAreas(Octree::DNode node);
 void FlushFluidCache();
 
 extern const char kFluid;
 extern const char kWall;
 
+// Represents a cuboid subdomain.
+// Tracks fraction of active (fluid) nodes.
 class Subdomain {
   public:
     Subdomain(iPoint3D origin, iPoint3D extent):
@@ -36,9 +38,9 @@ class Subdomain {
 		origin_(origin), extent_(extent),
 		fluid_nodes_(fluid_nodes) {};
 
-	Subdomain(const Octree::DNode node, int max_depth):
+	Subdomain(const Octree::DNode& node, int max_depth):
 		origin_(NodeLocation(node, max_depth)), extent_(NodeExtent(node, max_depth)),
-		fluid_nodes_(CountFluidNodes(node)) {};
+		fluid_nodes_(CountFluidNodes(node, max_depth)) {};
 
 	bool operator==(const Subdomain& rhs) const {
 		return this->origin_ == rhs.origin_ &&
@@ -110,9 +112,9 @@ class Subdomain {
   private:
 	iPoint3D origin_, extent_;  // location of the origin point and the point
 							    // opposite to the origin
-	int fluid_nodes_;
+	int fluid_nodes_;			// number of fluid nodes in the subdomain
 };
 
-std::vector<Subdomain> ToSubdomains(const Octree::DNode node);
+std::vector<Subdomain> ToSubdomains(const Octree::DNode node, const int max_depth);
 
 #endif

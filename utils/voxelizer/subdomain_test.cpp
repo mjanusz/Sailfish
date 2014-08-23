@@ -29,11 +29,21 @@ Octree MakeTestTree() {
 	return octree;
 }
 
-TEST(DTreeNode, NodeLocation) {
-	FlushFluidCache();
-	Octree octree = MakeTestTree();
+Octree MakeTestFluidTree() {
+	Octree octree(kWall);
+	octree.expand(kWall);
+	auto n = octree.root()[2];
+	n.expand(kWall);
+	for (int i = 4; i < 6; i++) {
+		n[i]() = kFluid;
+	}
+	return octree;
+}
 
+TEST(DTreeNode, NodeLocation) {
+	const Octree octree = MakeTestTree();
 	const int md = octree.max_depth();
+
 	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root(), md));
 	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0], md));
 	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0][0], md));
@@ -45,15 +55,27 @@ TEST(DTreeNode, NodeLocation) {
 }
 
 TEST(DTreeNode, NodeExtent) {
-	FlushFluidCache();
-	Octree octree = MakeTestTree();
-
+	const Octree octree = MakeTestTree();
 	const int md = octree.max_depth();
+
 	EXPECT_EQ(iPoint3D(3, 3, 3), NodeExtent(octree.root(), md));
 	EXPECT_EQ(iPoint3D(1, 1, 1), NodeExtent(octree.root()[0], md));
 	EXPECT_EQ(iPoint3D(0, 0, 0), NodeExtent(octree.root()[0][0], md));
 }
 
+TEST(DTreeNode, CountFluidNodes) {
+	FlushFluidCache();
+	const Octree octree = MakeTestFluidTree();
+	const int md = octree.max_depth();
+
+	EXPECT_EQ(2, CountFluidNodes(octree, md));
+	EXPECT_EQ(2, CountFluidNodes(octree.root()[2], md));
+	EXPECT_EQ(0, CountFluidNodes(octree.root()[1], md));
+	FlushFluidCache();
+	EXPECT_EQ(16, CountFluidNodes(octree, md + 1));
+}
+
+#if 0 
 TEST(SubdomainConversion, SingleSubdomain) {
 	FlushFluidCache();
 	Octree octree(0);
@@ -136,4 +158,4 @@ TEST(SubdomainConversion, TShapeGeometry) {
 	cout << octree.max_depth() << endl;
 	cout << NodeLocation(octree.root()[0]) << " " << NodeExtent(octree.root()[0])  << endl;
 */
-
+#endif

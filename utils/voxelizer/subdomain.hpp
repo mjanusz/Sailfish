@@ -17,8 +17,8 @@ using namespace cvmlcpp;
 
 typedef DTree<char, 3u> Octree;
 
-iPoint3D NodeLocation(const Octree::DNode& node);
-iPoint3D NodeExtent(const Octree::DNode& node);
+iPoint3D NodeLocation(const Octree::DNode& node, const int max_depth);
+iPoint3D NodeExtent(const Octree::DNode& node, const int max_depth);
 int CountFluidNodes(const Octree::DNode& node);
 void RemoveEmptyAreas(Octree::DNode node);
 void FlushFluidCache();
@@ -36,8 +36,8 @@ class Subdomain {
 		origin_(origin), extent_(extent),
 		fluid_nodes_(fluid_nodes) {};
 
-	Subdomain(const Octree::DNode node):
-		origin_(NodeLocation(node)), extent_(NodeExtent(node)),
+	Subdomain(const Octree::DNode node, int max_depth):
+		origin_(NodeLocation(node, max_depth)), extent_(NodeExtent(node, max_depth)),
 		fluid_nodes_(CountFluidNodes(node)) {};
 
 	bool operator==(const Subdomain& rhs) const {

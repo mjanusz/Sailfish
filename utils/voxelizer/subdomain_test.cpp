@@ -33,23 +33,25 @@ TEST(DTreeNode, NodeLocation) {
 	FlushFluidCache();
 	Octree octree = MakeTestTree();
 
-	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()));
-	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0]));
-	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0][0]));
+	const int md = octree.max_depth();
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root(), md));
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0], md));
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeLocation(octree.root()[0][0], md));
 
-	EXPECT_EQ(iPoint3D(1, 0, 0), NodeLocation(octree.root()[0][4]));
-	EXPECT_EQ(iPoint3D(1, 0, 1), NodeLocation(octree.root()[0][5]));
-	EXPECT_EQ(iPoint3D(1, 1, 0), NodeLocation(octree.root()[0][6]));
-	EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0][7]));
+	EXPECT_EQ(iPoint3D(1, 0, 0), NodeLocation(octree.root()[0][4], md));
+	EXPECT_EQ(iPoint3D(1, 0, 1), NodeLocation(octree.root()[0][5], md));
+	EXPECT_EQ(iPoint3D(1, 1, 0), NodeLocation(octree.root()[0][6], md));
+	EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0][7], md));
 }
 
 TEST(DTreeNode, NodeExtent) {
 	FlushFluidCache();
 	Octree octree = MakeTestTree();
 
-	EXPECT_EQ(iPoint3D(3, 3, 3), NodeExtent(octree.root()));
-	EXPECT_EQ(iPoint3D(1, 1, 1), NodeExtent(octree.root()[0]));
-	EXPECT_EQ(iPoint3D(0, 0, 0), NodeExtent(octree.root()[0][0]));
+	const int md = octree.max_depth();
+	EXPECT_EQ(iPoint3D(3, 3, 3), NodeExtent(octree.root(), md));
+	EXPECT_EQ(iPoint3D(1, 1, 1), NodeExtent(octree.root()[0], md));
+	EXPECT_EQ(iPoint3D(0, 0, 0), NodeExtent(octree.root()[0][0], md));
 }
 
 TEST(SubdomainConversion, SingleSubdomain) {
@@ -104,6 +106,8 @@ TEST(SubdomainConversion, TShapeGeometry) {
 	FlushFluidCache();
 	Octree octree(0);
 	voxelize(geometry, octree, voxel_size, kFluid, kWall);
+
+	return;
 	cout << octree.max_depth() << endl;
 
 	//EXPECT_EQ(iPoint3D(1, 1, 1), NodeLocation(octree.root()[0][0][1][1]));

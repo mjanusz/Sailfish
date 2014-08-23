@@ -14,10 +14,9 @@ ostream& operator<<(ostream& os, const Subdomain& s) {
 }
 
 // Returns the location (origin) of a node.
-iPoint3D NodeLocation(const Octree::DNode& node) {
+iPoint3D NodeLocation(const Octree::DNode& node, const int max_depth) {
 	iPoint3D location(0, 0, 0);
-
-	int shift = node.max_depth() - 1;
+	int shift = max_depth - 1;
 
 	for (const Octree::index_t it : node.index_trail()) {
 		int x = (it & 4) ? 1 : 0;
@@ -31,12 +30,13 @@ iPoint3D NodeLocation(const Octree::DNode& node) {
 	return location;
 }
 
-iPoint3D NodeExtent(const Octree::DNode& node) {
+// Returns the location of the point opposite to the origin.
+iPoint3D NodeExtent(const Octree::DNode& node, const int max_depth) {
 	// Start with the extent of the root node.
-	int h = 1 << node.max_depth();
+	int h = 1 << max_depth;
 	iPoint3D extent(h, h, h);
 
-	int shift = node.max_depth() - 1;
+	int shift = max_depth - 1;
 
 	for (const Octree::index_t it : node.index_trail()) {
 		int x = (it & 4) ? 0 : -1;
@@ -129,7 +129,7 @@ vector<Subdomain> ToSubdomains(const Octree::DNode node) {
 		if (CountFluidNodes(node) == 0) {
 			return vector<Subdomain>();
 		} else {
-			return vector<Subdomain>({Subdomain(node)});
+			return vector<Subdomain>({Subdomain(node, node.max_depth())});
 		}
 	}
 

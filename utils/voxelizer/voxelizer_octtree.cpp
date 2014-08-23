@@ -11,22 +11,71 @@
 #include <cvmlcpp/volume/Voxelizer>
 #include <cvmlcpp/volume/VoxelTools>
 
+#include "io.hpp"
 #include "subdomain.hpp"
 
 using namespace cvmlcpp;
 using namespace std;
 
-// TODO: tranform this program into a Python module so that STL geometry can
-// be used to directly initialize a simulation
-//
-// TODO: consider using the distances() function to provide an orientation
-// for the walls
+void FindFluidExtent(const Octree::DNode& node, const int max_depth, iPoint3D* pmin, iPoint3D* pmax) {
+	if (!node.isLeaf()) {
+		for (int i = 0; i < Octree::N; i++) {
+			FindFluidExtent(node[i], max_depth, pmin, pmax);
+		}
+		return;
+	}
+
+	if (node() == kFluid) {
+		const auto loc = NodeLocation(node, max_depth);
+		const auto ext = NodeExtent(node, max_depth);
+
+		if (loc.x() < pmin->x()) pmin->x() = loc.x();
+		if (loc.y() < pmin->y()) pmin->y() = loc.y();
+		if (loc.z() < pmin->z()) pmin->z() = loc.z();
+
+		if (ext.x() > pmax->x()) pmax->x() = ext.x();
+		if (ext.y() > pmax->y()) pmax->y() = ext.y();
+		if (ext.z() > pmax->z()) pmax->z() = ext.z();
+	}
+}
+
+void OctreeToMatrix(const Octree::DNode& node,
+		const int max_depth,
+		const iPoint3D& pmin,
+		const iPoint3D& pmax,
+		Matrix<char, 3u> *mtx_ptr) {
+	auto& mtx = *mtx_ptr;
+	// Prepare the array first.
+	if (node.depth() == 0) {
+		std::array<int, 3> size = {pmax.x() - pmin.x() + 1, pmax.y() - pmin.y() + 1, pmax.z() - pmin.z() + 1};
+		mtx.resize(size.data());
+		std::fill(mtx.begin(), mtx.end(), kWall);
+	}
+	if (!node.isLeaf()) {
+		for (int i = 0; i < Octree::N; i++) {
+			OctreeToMatrix(node[i], max_depth, pmin, pmax, mtx_ptr);
+		}
+		return;
+	}
+
+	// The array is already filled with wall nodes -- nothing to do.
+	if (node() != kFluid) return;
+
+	const auto loc = NodeLocation(node, max_depth);
+	const auto ext = NodeExtent(node, max_depth);
+
+	for (size_t x = loc.x() - pmin.x(); x <= ext.x() - pmin.x(); x++) {
+		for (size_t y = loc.y() - pmin.y(); y <= ext.y() - pmin.y(); y++) {
+			for (size_t z = loc.z() - pmin.z(); z <= ext.z() - pmin.z(); z++) {
+				mtx[x][y][z] = kFluid;
+			}
+		}
+	}
+}
 
 int main(int argc, char **argv)
 {
-	Matrix<char, 3u> voxels;
 	Geometry<float> geometry;
-
 	double voxel_size = 1.0 / 200.0;
 
 	if (argc < 2) {
@@ -38,11 +87,6 @@ int main(int argc, char **argv)
 		voxel_size = atof(argv[2]);
 	}
 
-	/*
-	 * Check organization of data in the tree.
-	 /
-	{
-	} */
 	readSTL(geometry, argv[1]);
 
 	geometry.scaleTo(1.0);
@@ -51,10 +95,24 @@ int main(int argc, char **argv)
 	       << geometry.max(1) - geometry.min(1) << " "
 	       << geometry.max(2) - geometry.min(2) << std::endl;
 
-	Octree octree(0);
-	//voxelize(geometry, octree, voxel_size, kFluid, kWall);
+	Octree octree(kWall);
 
-	cin >> octree;
+	voxelize(geometry, octree, voxel_size, kFluid /* inside */, kWall /* outside */);
+
+	cout << "Tree depth: " << octree.max_depth() << endl;
+
+	iPoint3D pmin(10000, 10000, 10000);
+	iPoint3D pmax(0, 0, 0);
+	FindFluidExtent(octree.root(), octree.max_depth(), &pmin, &pmax);
+	cout << "Bounding box: " << pmin << " - " << pmax << endl;
+
+	// At this point we could use expand(octree, voxels), but this is inefficent
+	// for domains that are not cubes. Instead, we use the custom implementation
+	// that only fills the data from [pmin, pmax].
+	Matrix<char, 3u> voxels;
+	OctreeToMatrix(octree, octree.max_depth(), pmin, pmax, &voxels);
+	SaveAsNumpy(voxels, "test.npy");
+	return 0;
 
 /*	RemoveEmptyAreas(octree.root());
 	cout << octree.root();
@@ -72,42 +130,5 @@ int main(int argc, char **argv)
 
 	cout << total_vol << " " << fluid_vol << " " << static_cast<double>(fluid_vol) / total_vol << endl;
 
-	/*
-	int fluid = count(voxels.begin(), voxels.end(), 0);
-	std::cout << "Nodes total: " << voxels.size() << " active: "
-		<< round(fluid / (double)voxels.size() * 10000) / 100.0 << "%" << std::endl;
-
-	const std::size_t *ext = voxels.extents();
-	std::cout << "Lattice size: " << ext[0] << " " << ext[1]
-		<< " " << ext[2] << std::endl;
-
-	std::ofstream out("output.npy");
-	out << "\x93NUMPY\x01";
-
-	char buf[128] = {0};
-
-	out.write(buf, 1);
-
-	snprintf(buf, 128, "{'descr': 'bool', 'fortran_order': False, 'shape': (%lu, %lu, %lu)}",
-			ext[0], ext[1], ext[2]);
-
-	int i, len = strlen(buf);
-	unsigned short int dlen = (((len + 10) / 16) + 1) * 16;
-
-	for (i = 0; i < dlen - 10 - len; i++) {
-		buf[len+i] = ' ';
-	}
-	buf[len+i] = 0x0;
-	dlen -= 10;
-
-	out.write((char*)&dlen, 2);
-	out << buf;
-
-	out.write(&(voxels.begin()[0]), voxels.size());
-	out.close();
-
-	// Export a VTK file with the voxelized geometry.
-	outputVTK(voxels, "output.vtk");
-*/
 	return 0;
 }

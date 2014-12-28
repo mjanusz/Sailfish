@@ -1,3 +1,7 @@
+// Converts STL data into a dense numpy array suitable for setting geometry
+// in a Sailfish simulation. Uses an octree to represent intermediate data for
+// optimal performance.
+
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
@@ -17,7 +21,9 @@
 using namespace cvmlcpp;
 using namespace std;
 
-void FindFluidExtent(const Octree::DNode& node, const int max_depth, iPoint3D* pmin, iPoint3D* pmax) {
+// Finds a bounding box contaning all fluid nodes.
+void FindFluidExtent(const Octree::DNode& node, const int max_depth,
+                     iPoint3D* pmin, iPoint3D* pmax) {
     if (!node.isLeaf()) {
         for (int i = 0; i < Octree::N; i++) {
             FindFluidExtent(node[i], max_depth, pmin, pmax);
@@ -39,6 +45,9 @@ void FindFluidExtent(const Octree::DNode& node, const int max_depth, iPoint3D* p
     }
 }
 
+// Converts an octree to a dense matrix. max_depth is used to determine node coordinates
+// in the dense array. pmin and pmax define a bounding box containing all fluid nodes.
+// pad specifies the number of voxels to add around that bounding box.
 void OctreeToMatrix(const Octree::DNode& node,
         const int max_depth,
         const iPoint3D& pmin,
@@ -52,6 +61,8 @@ void OctreeToMatrix(const Octree::DNode& node,
                                    pmax.y() - pmin.y() + 1 + 2 * pad,
                                    pmax.z() - pmin.z() + 1 + 2 * pad};
         mtx.resize(size.data());
+
+        // Start with wall nodes everywhere.
         std::fill(mtx.begin(), mtx.end(), kWall);
     }
     if (!node.isLeaf()) {
@@ -85,18 +96,19 @@ int ilog2(int v) {
     return ret;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     Geometry<float> geometry;
     int num_voxels = 100;
 
-    if (argc < 2) {
-        cerr << "Usage: ./voxelizer <STL file> [num_voxels]" << endl;
+    if (argc < 3) {
+        cerr << "Usage: ./voxelizer <STL file> <output_base> [num_voxels]" << endl;
         return -1;
     }
 
-    if (argc >= 3) {
-        num_voxels = atoi(argv[2]);
+    std::string output_fname(argv[2]);
+
+    if (argc >= 4) {
+        num_voxels = atoi(argv[3]);
     }
 
     readSTL(geometry, argv[1]);
@@ -108,6 +120,7 @@ int main(int argc, char **argv)
 
     Octree octree(kWall);
 
+    // Figure out voxel size based on the maximum extent of the geometry.
     double max_span = 0.0;
     for (std::size_t d = 0; d < 3; ++d) {
         max_span = std::max(max_span, static_cast<double>(geometry.max(d)) -
@@ -117,23 +130,25 @@ int main(int argc, char **argv)
     std::cout << "Voxel size: " << voxel_size << endl;
 
     voxelize(geometry, octree, voxel_size, kFluid /* inside */, kWall /* outside */);
-    cout << "Tree depth: actual: " << octree.max_depth() << " want: " << ilog2(num_voxels) << endl;
+    const int md = ilog2(num_voxels);
+    cout << "Tree depth: actual: " << octree.max_depth() << " want: " << md << endl;
 
+    // Find the bounding box. Start with arbitrary values such that max < min.
     iPoint3D pmin(10000, 10000, 10000);
     iPoint3D pmax(0, 0, 0);
-    int md = ilog2(num_voxels);
     FindFluidExtent(octree.root(), md, &pmin, &pmax);
     cout << "Bounding box: " << pmin << " - " << pmax << endl;
 
     // At this point we could use expand(octree, voxels), but this is inefficent
-    // for domains that are not cubes. Instead, we use the custom implementation
+    // for domains that are not cubes. Instead, we use a custom implementation
     // that only fills the data from [pmin, pmax].
     Matrix<char, 3u> voxels;
     OctreeToMatrix(octree, md, pmin, pmax, 1, &voxels);
-	const std::size_t *ext = voxels.extents();
+    const std::size_t *ext = voxels.extents();
     cout << "Array size: " << ext[0] << ", " << ext[1] << ", " << ext[2] << endl;
-    SaveAsNumpy(voxels, "test.npy");
+    SaveAsNumpy(voxels, output_fname);
     return 0;
+
 #if 0
     auto subs = ToSubdomains(octree.root());
     int total_vol = 0;

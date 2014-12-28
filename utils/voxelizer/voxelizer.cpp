@@ -1,3 +1,6 @@
+// Converts STL data into a dense numpy array suitable for setting geometry
+// in a Sailfish simulation.
+
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
@@ -15,8 +18,7 @@ using namespace cvmlcpp;
 using namespace std;
 
 // Outputs VTK 3.0 UNSTRUCTURED_GRID.
-void outputVTK(Matrix<char, 3u> &voxels, const char* filename)
-{
+void outputVTK(Matrix<char, 3u> &voxels, const char* filename) {
 	std::ofstream output(filename);
 	int N = count_if(voxels.begin(), voxels.end(), bind2nd(equal_to<int>(),1));
 
@@ -46,8 +48,7 @@ void outputVTK(Matrix<char, 3u> &voxels, const char* filename)
 // TODO: consider using the distances() function to provide an orientation
 // for the walls
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 	Matrix<char, 3u> voxels;
 	Geometry<float> geometry;
 

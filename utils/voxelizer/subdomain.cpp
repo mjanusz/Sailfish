@@ -13,7 +13,6 @@ ostream& operator<<(ostream& os, const Subdomain& s) {
 	return os;
 }
 
-// Returns the location (origin) of a node.
 iPoint3D NodeLocation(const Octree::DNode& node, const int max_depth) {
 	iPoint3D location(0, 0, 0);
 	int shift = max_depth - 1;
@@ -30,7 +29,6 @@ iPoint3D NodeLocation(const Octree::DNode& node, const int max_depth) {
 	return location;
 }
 
-// Returns the location of the point opposite to the origin.
 iPoint3D NodeExtent(const Octree::DNode& node, const int max_depth) {
 	// Start with the extent of the root node.
 	int h = 1 << max_depth;
@@ -57,7 +55,6 @@ void FlushFluidCache() {
 	fluid_cache.clear();
 }
 
-// Returns the number of children fluid nodes.
 int CountFluidNodes(const Octree::DNode& node, const int max_depth) {
 	auto it = fluid_cache.find(node.id());
 	if (it != fluid_cache.end()) return it->second;
@@ -79,7 +76,6 @@ int CountFluidNodes(const Octree::DNode& node, const int max_depth) {
 	return ret;
 }
 
-// Removes all children nodes that do no contain any fluid.
 void RemoveEmptyAreas(Octree::DNode node) {
 	if (node.isLeaf()) return;
 

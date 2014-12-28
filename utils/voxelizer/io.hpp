@@ -1,4 +1,3 @@
-
 // Simple logging for vectors.
 template <typename T>
 std::ostream& operator <<(std::ostream& os, const std::vector<T>& v) {
@@ -6,6 +5,7 @@ std::ostream& operator <<(std::ostream& os, const std::vector<T>& v) {
     return os;
 }
 
+// Saves a dense matrix as a numpy array.
 void SaveAsNumpy(const cvmlcpp::Matrix<char, 3u>& voxels, const std::string& fname) {
 	std::ofstream out(fname + ".npy");
 	out << "\x93NUMPY\x01";

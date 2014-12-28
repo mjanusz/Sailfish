@@ -12,7 +12,7 @@ GTEST_LIBS=gtest/lib/.libs/libgtest.a gtest/lib/.libs/libgtest_main.a
 .PHONY: voxelizer voxelizer_octree
 
 voxelizer: voxelizer.cpp
-	$(CXX) -O3 -DNDEBUG -std=c++11 $(CXXFLAGS) voxelizer.cpp -I. -Icvmlcpp -o $@
+	$(CXX) -O3 -DNDEBUG -std=c++11 $(CXXFLAGS) voxelizer.cpp subdomain.cpp -I. -Icvmlcpp -o $@
 
 voxelizer_octree: voxelizer_octree.cpp
 	$(CXX) -O3 -DNDEBUG -std=c++11 $(CXXFLAGS) voxelizer_octree.cpp subdomain.cpp -I. -Icvmlcpp -o $@

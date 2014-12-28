@@ -13,6 +13,7 @@
 #include <cvmlcpp/volume/Voxelizer>
 
 #include "io.hpp"
+#include "subdomain.hpp"
 
 using namespace cvmlcpp;
 using namespace std;
@@ -66,39 +67,25 @@ int main(int argc, char **argv) {
 	}
 
 	readSTL(geometry, argv[1]);
-
-	std::cout << "Original bounding box: "
-	       << geometry.min(0) << ":" << geometry.max(0) << " "
-	       << geometry.min(1) << ":" << geometry.max(1) << " "
-	       << geometry.min(2) << ":" << geometry.max(2) << std::endl;
-	// Start saving a config file in JSON. This config file can later be used
-	// to generate VTK data in the original coordinate system.
-	std::ofstream config(output_fname + ".config");
-	config << "{\"bounding_box\": ["
-		<< "[" << geometry.min(0) << ", " << geometry.max(0) << "], "
-		<< "[" << geometry.min(1) << ", " << geometry.max(1) << "], "
-		<< "[" << geometry.min(2) << ", " << geometry.max(2) << "]],";
+  auto orig_geometry = geometry;
 
 	// Scale so that the voxel_size parameter can have a geometry-independent
 	// meaning.
 	geometry.scaleTo(1.0);
 
-	voxelize(geometry, voxels, voxel_size, 1 /* pad */, (char)0 /* inside */, (char)1 /*outside */);
-	config << "\"padding\": [1, 1, 1, 1, 1, 1],";
-	config << "\"axes\": \"xyz\",";
+	voxelize(geometry, voxels, voxel_size, 1 /* pad */, kFluid /* inside */, kWall /*outside */);
 
-	int fluid = count(voxels.begin(), voxels.end(), 0);
+	const int fluid = count(voxels.begin(), voxels.end(), 0);
 	std::cout << "Nodes total: " << voxels.size() << " active: "
 		<< round(fluid / (double)voxels.size() * 10000) / 100.0 << "%" << std::endl;
 
 	const std::size_t *ext = voxels.extents();
 	std::cout << "Lattice size: " << ext[0] << " " << ext[1] << " " << ext[2] << std::endl;
-	config << "\"size\": [" << ext[0] << ", " << ext[1] << ", " << ext[2] << "]}";
-	config.close();
 
 	SaveAsNumpy(voxels, output_fname);
+  SaveConfigFile(geometry, voxels, output_fname);
 
-	// Export a VTK file with the voxelized geometry.
+  // Export a VTK file with the voxelized geometry.
 	// outputVTK(voxels, (output_fname + ".vtk").c_str());
 
 	return 0;

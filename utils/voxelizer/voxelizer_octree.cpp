@@ -114,11 +114,6 @@ int main(int argc, char **argv) {
 
   readSTL(geometry, argv[1]);
 
-  std::cout << "Bounding box: "
-      << geometry.max(0) - geometry.min(0) << " "
-      << geometry.max(1) - geometry.min(1) << " "
-      << geometry.max(2) - geometry.min(2) << std::endl;
-
   Octree octree(kWall);
 
   // Figure out voxel size based on the maximum extent of the geometry.
@@ -148,6 +143,7 @@ int main(int argc, char **argv) {
   const std::size_t *ext = voxels.extents();
   cout << "Array size: " << ext[0] << ", " << ext[1] << ", " << ext[2] << endl;
   SaveAsNumpy(voxels, output_fname);
+  SaveConfigFile(geometry, voxels, output_fname);
   return 0;
 
 #if 0

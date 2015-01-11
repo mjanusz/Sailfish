@@ -90,6 +90,8 @@ class SubdomainRunner(object):
 
         if self._bcg.is_double_precision():
             self.float = np.float64
+        elif self._bcg.is_half_precision():
+            self.float = np.float16
         else:
             self.float = np.float32
 
@@ -290,6 +292,7 @@ class SubdomainRunner(object):
 
         # Prior to numpy 1.7.0, the base was field (first element up the chain).
         assert fview.base is buf or fview.base is field
+
 
         # Zero the non-ghost part of the field.
         fview[:] = 0

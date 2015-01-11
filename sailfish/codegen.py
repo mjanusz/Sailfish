@@ -64,7 +64,7 @@ class BlockCodeGenerator(object):
     def add_options(cls, group):
         group.add_argument('--precision',
                 help='precision (single, double)', type=str,
-                choices=['single', 'double'], default='single')
+                choices=['single', 'double', 'half'], default='single')
         group.add_argument('--save_src',
                 help='file to save the CUDA/OpenCL source code to',
                 type=str, default='')
@@ -190,11 +190,15 @@ class BlockCodeGenerator(object):
     def is_double_precision(self):
         return self.config.precision == 'double'
 
+    def is_half_precision(self):
+        return self.config.precision == 'half'
+
     def _build_context(self, subdomain_runner):
         ctx = {}
         ctx['block_size'] = self.config.block_size
         ctx['propagation_sentinels'] = True
         ctx['unit_test'] = self.config.unit_test
+        ctx['precision'] = self.config.precision
 
         self._sim.update_context(ctx)
         subdomain_runner.update_context(ctx)

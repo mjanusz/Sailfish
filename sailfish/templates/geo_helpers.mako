@@ -3,6 +3,7 @@
 %>
 
 <%namespace file="kernel_common.mako" import="*" name="kernel_common"/>
+<%namespace file="mako_utils.mako" import="cond"/>
 
 typedef struct Dist {
 %for i, dname in enumerate(grid.idx_name):
@@ -224,7 +225,7 @@ ${device_func} void checkInvalidValues(Dist* d, ${position_decl()}) {
 // Load the distributions from din to dout, for the node with the index 'idx'.
 <%def name="get_dist_local()">
 	%for i, dname in enumerate(grid.idx_name):
-		dout->${dname} = ${get_dist('din', i, 'gi')};
+		dout->${dname} = ${cond(precision == 'half', '__half2float')}(${get_dist('din', i, 'gi')});
 	%endfor
 </%def>
 

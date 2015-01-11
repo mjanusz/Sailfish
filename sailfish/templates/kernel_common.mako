@@ -4,7 +4,7 @@
 %>
 
 <%page args="bgk_args_decl"/>
-<%namespace file="mako_utils.mako" import="cex"/>
+<%namespace file="mako_utils.mako" import="cex,cond"/>
 
 <%def name="kernel_args_1st_moment(name, const=False)">
 	${global_ptr} ${const_ptr if const else ''} float *__restrict__ ${name}x,
@@ -446,7 +446,7 @@
 </%def>
 
 <%def name="get_dist(array, i, idx, offset=0)" filter="trim">
-	${array}[${idx} + DIST_SIZE * ${i} + (unsigned int)${offset}]
+  ${array}[${idx} + DIST_SIZE * ${i} + (unsigned int)${offset}]
 </%def>
 
 ## FIXME: This should work in 3D.  Right now, there is no use case for that
